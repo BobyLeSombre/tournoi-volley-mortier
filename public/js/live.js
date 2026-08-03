@@ -213,20 +213,35 @@ function renderDirect(state) {
   views.direct.replaceChildren(...out);
 }
 
-function upcomingRow(state, m) {
-  const finished = m.status === 'finished';
-  return el('div', { class: 'upcoming-row' }, [
-    el('span', { class: 'time', text: roundLabel(m) }),
-    el('span', { class: 'vs' }, [
-      sideName(state, m, 'A'),
-      el('span', { text: 'vs' }),
-      sideName(state, m, 'B'),
+/**
+ * Ligne de match unifiée, pensée mobile : les équipes en avant (elles peuvent
+ * s'étaler sur plusieurs lignes), une sous-ligne de contexte compacte, et un
+ * seul statut à droite. Fini les colonnes qui se chevauchent sur un téléphone.
+ */
+function matchLine(state, m, subText, statusEl) {
+  return el('div', { class: 'match-line' }, [
+    el('div', { class: 'ml-main' }, [
+      el('div', { class: 'ml-teams' }, [
+        el('span', { text: sideName(state, m, 'A') }),
+        el('span', { class: 'ml-vs', text: 'vs' }),
+        el('span', { text: sideName(state, m, 'B') }),
+      ]),
+      el('div', { class: 'ml-sub', text: subText }),
     ]),
-    finished
-      ? el('span', { class: 'final-score', text: `${m.scoreA} – ${m.scoreB}` })
-      : el('span', { class: 'where', text: matchLabel(state, m) }),
-    el('span', { class: 'where', text: m.court }),
+    statusEl,
   ]);
+}
+
+function scoreOrBadge(m) {
+  if (m.status === 'finished') {
+    return el('span', { class: 'ml-score', text: `${m.scoreA} – ${m.scoreB}` });
+  }
+  return statusBadge(m);
+}
+
+function upcomingRow(state, m) {
+  const sub = `${roundLabel(m)} · ${m.court} · ${matchLabel(state, m)}`;
+  return matchLine(state, m, sub, scoreOrBadge(m));
 }
 
 function renderCalendrier(state) {
@@ -265,21 +280,14 @@ function renderCalendrier(state) {
 
 function calendarRow(state, m) {
   const left = remainingMs(m);
-  return el('div', { class: 'upcoming-row' }, [
-    el('span', { class: 'where', style: 'width:80px', text: m.court }),
-    el('span', { class: 'vs' }, [
-      sideName(state, m, 'A'),
-      el('span', { text: 'vs' }),
-      sideName(state, m, 'B'),
-    ]),
-    el('span', { class: 'where', text: matchLabel(state, m) }),
-    m.status === 'pending'
-      ? statusBadge(m)
-      : el('span', { class: 'final-score', text: `${m.scoreA} – ${m.scoreB}` }),
-    m.status === 'live' || m.status === 'paused'
-      ? el('span', { class: clockClass(left, m.status), style: 'font-size:.95rem', text: fmtClock(left) })
-      : statusBadge(m),
-  ]);
+  let statusEl;
+  if (m.status === 'live' || m.status === 'paused') {
+    statusEl = el('span', { class: `${clockClass(left, m.status)} ml-clock`, text: fmtClock(left) });
+  } else {
+    statusEl = scoreOrBadge(m);
+  }
+  const sub = `${m.court} · ${matchLabel(state, m)}`;
+  return matchLine(state, m, sub, statusEl);
 }
 
 function renderClassements(state) {
