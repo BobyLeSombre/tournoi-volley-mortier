@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Arbitre — Tournoi de Volley Mortier</title>
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/logo.jpg" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      /* Interface pensée pour un téléphone tenu à une main, au bord du terrain. */
+      .gate {
+        max-width: 380px;
+        margin: 12vh auto 0;
+        text-align: center;
+      }
+      .gate .gate-logo {
+        width: 110px;
+        height: 110px;
+        object-fit: contain;
+        margin-bottom: 10px;
+        mix-blend-mode: multiply;
+      }
+      .gate h1 {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+      }
+      .gate p {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0 0 24px;
+      }
+      .gate input {
+        text-align: center;
+        font-size: 1.6rem;
+        font-weight: 800;
+        letter-spacing: 0.3em;
+        padding: 16px;
+        font-family: var(--mono);
+      }
+
+      .picker-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 15px 16px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--text);
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .picker-item:last-child {
+        border-bottom: none;
+      }
+      .picker-item:hover {
+        background: var(--surface-2);
+      }
+      .picker-item .time {
+        font-family: var(--mono);
+        font-weight: 750;
+        color: var(--accent-strong);
+        width: 50px;
+        flex: none;
+        font-size: 0.9rem;
+      }
+      .picker-item .names {
+        flex: 1;
+        min-width: 0;
+        font-weight: 700;
+        font-size: 0.96rem;
+        line-height: 1.35;
+      }
+      /* Écran d'accueil : une grosse tuile par terrain, touchable au pouce. */
+      .court-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .court-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        min-height: 116px;
+        padding: 16px;
+        text-align: left;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        color: var(--text);
+        font-family: inherit;
+        cursor: pointer;
+        transition: border-color 0.15s, transform 0.08s, background 0.15s;
+      }
+      .court-tile:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .court-tile:active {
+        transform: translateY(1px);
+      }
+      .court-tile.is-live {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(28, 148, 9, 0.18), var(--shadow);
+      }
+      /* Terrain déjà tenu par un autre arbitre : inaccessible. */
+      .court-tile.is-taken {
+        cursor: not-allowed;
+        background: var(--bg-soft);
+        border-color: var(--line-soft);
+        border-style: dashed;
+        box-shadow: none;
+        opacity: 0.62;
+      }
+      .court-tile.is-taken:hover {
+        background: var(--bg-soft);
+        border-color: var(--line-soft);
+      }
+      .court-tile.is-taken .court-tile-name,
+      .court-tile.is-taken .court-tile-match {
+        color: var(--dim);
+      }
+      .court-tile-lock {
+        margin-top: auto;
+        font-size: 0.76rem;
+        font-weight: 750;
+        color: var(--muted);
+      }
+      .court-tile-name {
+        font-size: 1.15rem;
+        font-weight: 820;
+        letter-spacing: -0.02em;
+      }
+      .court-tile-match {
+        font-size: 0.86rem;
+        font-weight: 650;
+        line-height: 1.35;
+        color: var(--muted);
+        overflow-wrap: break-word;
+      }
+      .court-tile-match em {
+        display: block;
+        font-style: normal;
+        font-size: 0.76rem;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .court-tile-score {
+        margin-top: auto;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 1.5rem;
+        font-weight: 820;
+        color: var(--accent-strong);
+        letter-spacing: -0.03em;
+      }
+      .court-tile .badge {
+        margin-top: auto;
+      }
+
+      .me-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--accent-soft);
+        border: 1px solid rgba(28, 148, 9, 0.35);
+        border-radius: var(--radius);
+        margin-top: 14px;
+        font-size: 0.88rem;
+      }
+      .me-bar strong {
+        font-weight: 780;
+      }
+      .me-bar .court-tag {
+        color: var(--accent-strong);
+        font-weight: 750;
+      }
+      .me-bar button {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: var(--accent-strong);
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 4px;
+      }
+      .picker-item .court-badge {
+        font-size: 0.74rem;
+        font-weight: 750;
+        color: var(--accent-strong);
+        white-space: nowrap;
+      }
+      .picker-item .names em {
+        display: block;
+        font-style: normal;
+        font-size: 0.74rem;
+        color: var(--dim);
+        font-weight: 650;
+        margin-top: 3px;
+      }
+
+      /* ------------------------------------------------------- tableau de marque */
+      .scoreboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 14px 0;
+      }
+      .team-panel {
+        position: relative;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .team-panel .label {
+        padding: 13px 14px 6px;
+        font-weight: 750;
+        font-size: 0.95rem;
+        line-height: 1.25;
+        text-align: center;
+        overflow-wrap: anywhere;
+        min-height: 56px;
+      }
+      .plus {
+        appearance: none;
+        border: none;
+        background: none;
+        color: var(--text);
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-size: clamp(4rem, 22vw, 7rem);
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 1;
+        padding: 8px 0 22px;
+        width: 100%;
+        cursor: pointer;
+        transition: background 0.12s, transform 0.08s;
+      }
+      .plus:hover {
+        background: rgba(28, 148, 9, 0.07);
+      }
+      .plus:active {
+        transform: scale(0.97);
+        background: rgba(28, 148, 9, 0.16);
+      }
+      .plus:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      .minus {
+        border: none;
+        border-top: 1px solid var(--line-soft);
+        background: var(--bg-soft);
+        color: var(--muted);
+        font-family: inherit;
+        font-weight: 750;
+        font-size: 0.85rem;
+        padding: 12px;
+        cursor: pointer;
+      }
+      .minus:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .tap-hint {
+        text-align: center;
+        color: var(--dim);
+        font-size: 0.78rem;
+        font-weight: 650;
+        margin: -4px 0 16px;
+      }
+
+      .timer-box {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        text-align: center;
+        margin-bottom: 14px;
+      }
+      .timer-box.interval {
+        border-color: var(--warn);
+        background: var(--warn-soft);
+      }
+      .period-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        font-size: 0.72rem;
+        font-weight: 780;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .timer-box.interval .period-pill {
+        background: #fff;
+        border-color: var(--warn);
+        color: var(--warn);
+      }
+      .timer-box .big-clock {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-size: clamp(3rem, 15vw, 4.4rem);
+        font-weight: 850;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin-bottom: 6px;
+      }
+      .timer-box .big-clock.urgent {
+        color: var(--warn);
+      }
+      .timer-box .big-clock.over {
+        color: var(--danger);
+        animation: blink 1s steps(2) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .timer-box .state {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+      }
+      .timer-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .btn.xl {
+        font-size: 0.95rem;
+        padding: 15px 14px;
+        border-radius: 13px;
+        flex: 1;
+        min-width: 130px;
+        white-space: nowrap;
+      }
+      /* Action principale d'un entre-période : elle occupe sa propre ligne. */
+      .btn.xl.wide {
+        flex-basis: 100%;
+      }
+      .finish-row {
+        display: flex;
+        gap: 10px;
+      }
+      .match-context {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .match-context .who {
+        font-weight: 750;
+        font-size: 0.9rem;
+      }
+      .confirm-box {
+        background: var(--surface-2);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-top: 12px;
+        text-align: center;
+      }
+      .confirm-box p {
+        margin: 0 0 14px;
+        font-weight: 700;
+      }
+      .confirm-box .win {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">
+          <img class="logo" src="/logo.jpg" alt="Jeunesse Mortier a.s.b.l." />
+          <span>
+            Arbitrage
+            <small data-tournament-name>Tournoi de Volley Mortier</small>
+          </span>
+        </a>
+        <nav class="nav">
+          <a href="#" id="back-list" hidden>← Matchs</a>
+        </nav>
+        <div class="conn"><i class="dot"></i><span>connexion…</span></div>
+      </div>
+    </header>
+
+    <main class="wrap" style="max-width: 720px">
+      <section id="gate" class="gate" hidden>
+        <img class="gate-logo" src="/logo.jpg" alt="Jeunesse Mortier a.s.b.l." />
+        <h1>Espace arbitre</h1>
+        <p>Entre le code arbitre communiqué par l'organisation.</p>
+        <div class="field">
+          <input id="pin" type="text" inputmode="numeric" autocomplete="off" placeholder="••••" />
+        </div>
+        <button class="btn primary" id="pin-submit" style="width: 100%; padding: 15px">Entrer</button>
+      </section>
+
+      <section id="who" hidden></section>
+      <section id="picker" hidden></section>
+      <section id="board" hidden></section>
+    </main>
+
+    <script type="module" src="/js/arbitre.js"></script>
+  </body>
+</html>

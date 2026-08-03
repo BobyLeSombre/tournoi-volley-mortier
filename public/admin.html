@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin — Tournoi de Volley Mortier</title>
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/logo.jpg" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      .gate {
+        max-width: 360px;
+        margin: 14vh auto 0;
+        text-align: center;
+      }
+      .gate h1 {
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+      }
+      .pool-card {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+        background: var(--bg-soft);
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .pool-card header {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .pool-card header input {
+        font-weight: 750;
+        max-width: 220px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 8px 6px 14px;
+        font-size: 0.86rem;
+        font-weight: 650;
+        margin: 0 6px 6px 0;
+      }
+      .chip button {
+        border: none;
+        background: none;
+        color: var(--dim);
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 2px 4px;
+      }
+      .chip button:hover {
+        color: var(--danger);
+      }
+      .chip select {
+        width: auto;
+        padding: 3px 6px;
+        font-size: 0.76rem;
+        border-radius: 7px;
+      }
+      .match-row {
+        display: grid;
+        grid-template-columns: 62px 1fr auto auto auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 0.88rem;
+      }
+      .match-row:last-child {
+        border-bottom: none;
+      }
+      .match-row input,
+      .match-row select {
+        padding: 6px 8px;
+        font-size: 0.82rem;
+      }
+      .match-row .pair {
+        font-weight: 650;
+        min-width: 0;
+      }
+      .danger-zone {
+        border-color: rgba(185, 28, 28, 0.28);
+      }
+      .court-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 10px;
+      }
+      .court-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--bg-soft);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+      }
+      .court-row .court-name {
+        font-weight: 750;
+        font-size: 0.88rem;
+        white-space: nowrap;
+      }
+      .court-state {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.84rem;
+        font-weight: 650;
+        line-height: 1.3;
+        overflow-wrap: break-word;
+      }
+      .court-state em {
+        display: block;
+        font-style: normal;
+        font-size: 0.74rem;
+        font-weight: 650;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .badge.ok {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        border-color: rgba(28, 148, 9, 0.4);
+      }
+      .link-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .link-row .btn {
+        flex: none;
+      }
+      .link-note {
+        flex-basis: 100%;
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        color: var(--warn);
+        font-weight: 650;
+      }
+      .links a {
+        display: block;
+        flex: 1;
+        min-width: 200px;
+        padding: 10px 12px;
+        background: var(--bg-soft);
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        font-family: var(--mono);
+        font-size: 0.84rem;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+      .links a:hover {
+        border-color: var(--accent);
+      }
+      .links a b {
+        display: block;
+        font-family: var(--font);
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 3px;
+      }
+      @media (max-width: 640px) {
+        .match-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* --------------------------------------------------------- onglets orga */
+      .admin-tabs {
+        position: sticky;
+        top: 62px;
+        z-index: 20;
+        display: flex;
+        gap: 4px;
+        padding: 6px;
+        margin-bottom: 18px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        overflow-x: auto;
+      }
+      .admin-tab {
+        position: relative;
+        flex: 1;
+        min-width: max-content;
+        padding: 11px 16px;
+        border: none;
+        border-radius: 10px;
+        background: none;
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.92rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s, color 0.15s;
+      }
+      .admin-tab:hover {
+        color: var(--text);
+        background: var(--bg-soft);
+      }
+      .admin-tab.active {
+        color: #fff;
+        background: var(--accent-strong);
+      }
+      .tab-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-left: 7px;
+        border-radius: 50%;
+        background: var(--warn);
+        vertical-align: middle;
+      }
+      .admin-tab.active .tab-dot {
+        background: #fff;
+      }
+      .next-step {
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        background: var(--accent-soft);
+        border: 1px solid rgba(28, 148, 9, 0.3);
+        color: var(--accent-strong);
+        font-weight: 700;
+        font-size: 0.92rem;
+      }
+
+      /* ------------------------------------------------------------ Équipes */
+      .bulk-input {
+        width: 100%;
+        font-family: var(--mono);
+        font-size: 0.88rem;
+        line-height: 1.6;
+        resize: vertical;
+        min-height: 180px;
+        background: #fff;
+      }
+      .bulk-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+      }
+      .bulk-label {
+        margin: 0;
+        white-space: nowrap;
+      }
+      .bulk-pools {
+        width: 78px;
+        text-align: center;
+        font-weight: 750;
+      }
+      .bulk-mode {
+        width: auto;
+        flex: 1;
+        min-width: 200px;
+      }
+      .bulk-preview {
+        border-top: 1px solid var(--line-soft);
+        padding-top: 12px;
+      }
+      .bulk-stats {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .bulk-stats strong {
+        font-size: 1.15rem;
+        color: var(--accent-strong);
+      }
+      .bulk-split {
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+      .bulk-warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+      .bulk-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-height: 132px;
+        overflow-y: auto;
+      }
+      .mini-chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        font-size: 0.8rem;
+        font-weight: 650;
+      }
+      .mini-chip.dup {
+        background: var(--warn-soft);
+        border-color: var(--warn);
+        color: var(--warn);
+      }
+
+      .teams-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .teams-count {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .teams-count strong {
+        font-size: 1.15rem;
+        color: var(--text);
+      }
+
+      .pools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 12px;
+      }
+      .move-bar {
+        position: sticky;
+        top: 8px;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding: 10px 14px;
+        border-radius: var(--radius);
+        background: var(--accent-strong);
+        color: #fff;
+        font-size: 0.88rem;
+        box-shadow: var(--shadow);
+      }
+      .move-bar span {
+        flex: 1;
+      }
+      .move-bar .btn {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: transparent;
+        color: #fff;
+      }
+      .pool-col {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+        background: var(--bg-soft);
+        transition: border-color 0.15s, background 0.15s;
+      }
+      /* Pendant un déplacement, toutes les poules deviennent des cibles visibles. */
+      .pool-col.droppable {
+        border-style: dashed;
+        border-color: var(--accent);
+        cursor: pointer;
+      }
+      .pool-col.over {
+        background: var(--accent-soft);
+        border-style: solid;
+      }
+      .pool-col-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pool-name {
+        font-weight: 780;
+        font-size: 0.88rem;
+        padding: 5px 8px;
+        background: transparent;
+        border-color: transparent;
+      }
+      .pool-name:hover {
+        border-color: var(--line);
+        background: #fff;
+      }
+      .pool-name.orphan {
+        color: var(--warn);
+        padding: 5px 0;
+      }
+      .pool-size {
+        flex: none;
+        display: grid;
+        place-items: center;
+        min-width: 24px;
+        height: 24px;
+        border-radius: 7px;
+        background: var(--surface-2);
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: var(--muted);
+      }
+      .pool-col-body {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 34px;
+      }
+      .team-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        background: #fff;
+        border: 1px solid var(--line-soft);
+        border-radius: 9px;
+        font-size: 0.86rem;
+        font-weight: 650;
+        cursor: grab;
+      }
+      .team-chip:active {
+        cursor: grabbing;
+      }
+      .team-chip.picked {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 0 0 3px rgba(28, 148, 9, 0.14);
+      }
+      .team-chip-grip {
+        color: var(--dim);
+        cursor: pointer;
+        font-size: 0.9rem;
+        line-height: 1;
+        padding: 2px;
+        flex: none;
+      }
+      .team-chip-grip:hover {
+        color: var(--accent-strong);
+      }
+      .team-chip-name {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        cursor: text;
+        border-radius: 4px;
+      }
+      .team-chip-name:hover {
+        background: var(--surface-2);
+      }
+      .team-chip-edit {
+        flex: 1;
+        min-width: 0;
+        padding: 2px 6px;
+        font-size: 0.86rem;
+        font-weight: 650;
+      }
+      .team-chip-del {
+        flex: none;
+        border: none;
+        background: none;
+        color: var(--dim);
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 2px 4px;
+      }
+      .team-chip-del:hover {
+        color: var(--danger);
+      }
+      .pool-add {
+        padding: 6px 8px;
+        font-size: 0.82rem;
+        background: transparent;
+        border-style: dashed;
+      }
+      .pool-add:focus {
+        background: #fff;
+        border-style: solid;
+      }
+
+      /* ------------------------------------------------- modération photos */
+      .mod-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+      }
+      .mod-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .mod-cell img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid var(--line-soft);
+        background: var(--bg-soft);
+      }
+      .mod-del {
+        border: none;
+        background: none;
+        color: var(--danger);
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 2px;
+      }
+      .mod-del:hover {
+        text-decoration: underline;
+      }
+
+      /* ----------------------------------------------------------- QR codes */
+      .qr-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      .qr-url {
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        overflow-wrap: anywhere;
+      }
+      .qr-print-note {
+        display: none;
+        margin: 0;
+        font-size: 0.95rem;
+        color: #444;
+      }
+      .qr-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        text-align: center;
+      }
+      .qr-card strong {
+        font-size: 0.95rem;
+        font-weight: 800;
+      }
+      .qr-card span {
+        font-size: 0.76rem;
+        color: var(--muted);
+        font-weight: 650;
+      }
+      .qr-img {
+        display: block;
+        width: 100%;
+        max-width: 190px;
+        height: auto;
+        image-rendering: pixelated; /* garde les modules nets à l'impression */
+      }
+      .qr-print-head {
+        display: none;
+        text-align: center;
+      }
+
+      /* À l'impression, seule la zone QR sort — une feuille à scotcher. */
+      @media print {
+        body {
+          background: #fff;
+        }
+        .topbar,
+        .page-head,
+        .admin-tabs,
+        .next-step,
+        .panel,
+        .toast {
+          display: none !important;
+        }
+        .panel:has(.qr-zone) {
+          display: block !important;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          margin: 0;
+        }
+        .panel:has(.qr-zone) > h2,
+        .panel:has(.qr-zone) > .hint,
+        .panel:has(.qr-zone) > .row {
+          display: none !important;
+        }
+        .qr-print-head {
+          display: block;
+          margin-bottom: 10px;
+        }
+        .qr-print-head h3 {
+          font-size: 1.5rem;
+        }
+        .qr-print-head p {
+          color: #444;
+          margin: 4px 0 0;
+        }
+        .qr-card {
+          break-inside: avoid;
+          border-color: #bbb;
+          padding: 24px;
+        }
+        .qr-img {
+          max-width: 340px;
+        }
+        .qr-print-note {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">
+          <img class="logo" src="/logo.jpg" alt="Jeunesse Mortier a.s.b.l." />
+          <span>
+            Administration
+            <small data-tournament-name>Tournoi de Volley Mortier</small>
+          </span>
+        </a>
+        <nav class="nav">
+          <a href="/">Écran public</a>
+          <a href="/arbitre.html">Arbitre</a>
+        </nav>
+        <div class="conn"><i class="dot"></i><span>connexion…</span></div>
+      </div>
+    </header>
+
+    <main class="wrap" style="max-width: 900px">
+      <section id="gate" class="gate" hidden>
+        <h1>Espace organisation</h1>
+        <div class="field">
+          <input id="password" type="password" placeholder="Mot de passe admin" />
+        </div>
+        <button class="btn primary" id="password-submit" style="width: 100%">Entrer</button>
+        <p style="color: var(--dim); font-size: 0.8rem; margin-top: 18px">
+          Mot de passe par défaut : <code>admin</code> — pense à le changer.
+        </p>
+      </section>
+
+      <section id="app" hidden></section>
+    </main>
+
+    <script type="module" src="/js/admin.js"></script>
+  </body>
+</html>

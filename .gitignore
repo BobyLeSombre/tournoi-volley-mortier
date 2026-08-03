@@ -1,0 +1,10 @@
+node_modules/
+
+# Données du tournoi : générées au fil de l'eau, jamais versionnées. Le déploiement
+# démarre donc sur un tournoi vierge.
+data/*.json
+data/photos/
+!data/.gitkeep
+
+.env
+*.log

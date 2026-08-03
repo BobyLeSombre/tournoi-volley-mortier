@@ -1,0 +1,19 @@
+{
+  "name": "tournoi-volley-mortier",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tournoi de Volley Mortier — suivi en direct : scores live, chrono, classements de poules, interface arbitre.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode-svg": "^1.1.0",
+    "ws": "^8.18.0"
+  }
+}

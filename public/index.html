@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tournoi de Volley Mortier — suivi en direct</title>
+    <meta name="description" content="Scores en direct, chronos et classements des poules du Tournoi de Volley Mortier." />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/logo.jpg" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      /* Bandeau « à suivre » et mode TV, spécifiques à l'écran spectateur */
+      .hero-stats {
+        display: flex;
+        gap: 26px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 650;
+      }
+      .hero-stats b {
+        color: var(--text);
+        font-size: 1.05rem;
+      }
+      .pool-block {
+        margin-bottom: 26px;
+      }
+      .pool-block > h3 {
+        font-size: 0.95rem;
+        font-weight: 780;
+        margin: 0 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .pool-block > h3::before {
+        content: '';
+        width: 4px;
+        height: 17px;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+      /* Bannière du tour : le repère de la journée sur l'écran public. */
+      .round-banner {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 15px 20px;
+        margin-bottom: 6px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .round-banner strong {
+        font-size: 1.15rem;
+        font-weight: 820;
+        letter-spacing: -0.02em;
+      }
+      .round-banner > span {
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+      .round-banner .round-bar {
+        flex: 1;
+        min-width: 120px;
+        height: 7px;
+        border-radius: 4px;
+        background: var(--surface-2);
+        overflow: hidden;
+        padding: 0;
+      }
+      .round-banner .round-bar i {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+        border-radius: 4px;
+        transition: width 0.4s ease;
+      }
+      .round-banner.ready {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .round-banner.ready > span {
+        color: var(--accent-strong);
+        font-weight: 750;
+      }
+      .round-banner.done {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      body.tv .round-banner {
+        padding: 20px 26px;
+      }
+      body.tv .round-banner strong {
+        font-size: 1.7rem;
+      }
+      body.tv .round-banner > span {
+        font-size: 1.15rem;
+      }
+      .round-note {
+        margin-left: 10px;
+        font-size: 0.74rem;
+        font-weight: 650;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      .head-line {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      /* Le logo remplace la barre de navigation quand on passe au vidéoprojecteur. */
+      .tv-logo,
+      .tv-title {
+        display: none;
+      }
+      body.tv .tv-logo {
+        display: block;
+        width: 84px;
+        height: 84px;
+        object-fit: contain;
+        mix-blend-mode: multiply;
+      }
+      body.tv .tv-title {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 780;
+        color: var(--accent-strong);
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
+      }
+      .upcoming-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .upcoming-row:last-child {
+        border-bottom: none;
+      }
+      .upcoming-row .time {
+        font-family: var(--mono);
+        font-weight: 750;
+        color: var(--accent-strong);
+        font-size: 0.9rem;
+        flex: none;
+        width: 52px;
+      }
+      .upcoming-row .vs {
+        flex: 1;
+        min-width: 0;
+        font-weight: 650;
+        font-size: 0.94rem;
+      }
+      .upcoming-row .vs span {
+        color: var(--dim);
+        padding: 0 6px;
+      }
+      .upcoming-row .where {
+        font-size: 0.76rem;
+        color: var(--dim);
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        flex: none;
+      }
+      .upcoming-row .final-score {
+        font-family: var(--mono);
+        font-weight: 800;
+        font-size: 0.95rem;
+        flex: none;
+      }
+      /* ------------------------------------------------------- « Mon équipe » */
+      .team-search-box {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 24px 0 14px;
+      }
+      .team-search {
+        flex: 1;
+        font-size: 1rem;
+        padding: 13px 16px;
+      }
+      .team-results {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .team-result {
+        padding: 9px 15px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 650;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .team-result:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .team-result.current {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+        color: #fff;
+      }
+      .team-noresult {
+        color: var(--dim);
+        font-size: 0.9rem;
+        padding: 8px 2px;
+      }
+
+      .team-card {
+        padding: 22px;
+      }
+      .tc-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .tc-name {
+        font-size: clamp(1.4rem, 5vw, 1.9rem);
+        font-weight: 850;
+        line-height: 1.1;
+      }
+      .tc-pool {
+        margin-top: 5px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--accent-strong);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      .tc-head .badge {
+        margin-left: auto;
+        flex: none;
+      }
+      .tc-banner {
+        padding: 13px 16px;
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+        margin-bottom: 14px;
+      }
+      .tc-banner.in {
+        background: var(--accent-soft);
+        border: 1px solid rgba(28, 148, 9, 0.35);
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+      .tc-banner.out {
+        background: var(--warn-soft);
+        border: 1px solid rgba(180, 83, 9, 0.28);
+        color: var(--warn);
+      }
+      .tc-banner.done {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        font-weight: 750;
+      }
+      .tc-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .tc-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 2px;
+        padding: 14px 8px;
+        border-radius: var(--radius);
+        background: var(--bg-soft);
+        border: 1px solid var(--line-soft);
+      }
+      .tc-tile b {
+        font-size: 1.7rem;
+        font-weight: 850;
+        line-height: 1;
+        color: var(--accent-strong);
+        font-variant-numeric: tabular-nums;
+      }
+      .tc-tile span {
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-weight: 650;
+        line-height: 1.2;
+      }
+      .tc-tile em {
+        font-style: normal;
+        font-size: 0.7rem;
+        color: var(--dim);
+      }
+      .tc-section {
+        margin-top: 18px;
+      }
+      .tc-section-title {
+        font-size: 0.76rem;
+        font-weight: 750;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        margin: 18px 0 8px;
+      }
+      .tc-matches {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .tc-match {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .tc-match:last-child {
+        border-bottom: none;
+      }
+      .tc-match-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        width: 88px;
+        flex: none;
+      }
+      .tc-match-adv {
+        flex: 1;
+        min-width: 0;
+        font-weight: 650;
+        font-size: 0.92rem;
+        overflow-wrap: anywhere;
+      }
+      .tc-match-score {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        font-size: 0.95rem;
+        flex: none;
+      }
+      .tc-match-score.win {
+        color: var(--accent);
+      }
+      .tc-match-score.loss {
+        color: var(--muted);
+      }
+      .tc-match-todo {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--accent-strong);
+        flex: none;
+      }
+      tbody tr.me {
+        background: var(--accent-soft);
+      }
+      tbody tr.me .rank {
+        background: var(--accent);
+        color: #fff;
+      }
+      @media (max-width: 480px) {
+        .tc-tiles {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* Onglet « Photos » : juste le mot en dégradé vert qui ondule doucement,
+         pour attirer discrètement l'œil. Pas de pastille tant qu'il n'est pas
+         actif (là, il reprend l'apparence normale des onglets). */
+      .tab[data-view='photos']:not(.active) {
+        font-weight: 750;
+        background-image: linear-gradient(
+          100deg,
+          var(--accent-strong) 0%,
+          #4fce58 45%,
+          var(--accent-strong) 60%,
+          #147006 100%
+        );
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: photoTabFlow 4.5s linear infinite;
+      }
+      /* Actif : on reprend l'apparence normale d'un onglet, texte bien visible. */
+      .tab[data-view='photos'].active {
+        color: var(--accent-strong);
+        -webkit-text-fill-color: var(--accent-strong);
+        background: var(--accent-soft);
+      }
+      @keyframes photoTabFlow {
+        to {
+          background-position: -200% 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tab[data-view='photos']:not(.active) {
+          animation: none;
+        }
+      }
+
+      /* ---------------------------------------------------------- Photos */
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .photo-cell,
+      .photo-add {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: var(--radius);
+        overflow: hidden;
+        padding: 0;
+        border: 1px solid var(--line-soft);
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .photo-cell {
+        display: block;
+      }
+      .photo-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.2s;
+        background: var(--bg-soft);
+      }
+      .photo-cell:hover .photo-thumb {
+        transform: scale(1.04);
+      }
+      /* Le gros + : première tuile de la galerie, toujours en tête. */
+      .photo-add {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 2px dashed var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-family: inherit;
+      }
+      .photo-add:hover {
+        background: #dcefd8;
+      }
+      .photo-add-plus {
+        font-size: 2.6rem;
+        font-weight: 300;
+        line-height: 0.8;
+      }
+      .photo-add-label {
+        font-size: 0.82rem;
+        font-weight: 750;
+      }
+      .photo-add.busy {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      .photo-add.busy .photo-add-plus {
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .photo-empty {
+        color: var(--dim);
+        font-size: 0.92rem;
+        text-align: center;
+        padding: 20px;
+      }
+      .photo-lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(10, 20, 8, 0.92);
+        cursor: zoom-out;
+      }
+      .photo-lightbox img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: var(--radius);
+        object-fit: contain;
+      }
+      .photo-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        font-size: 1.2rem;
+        cursor: pointer;
+      }
+      .photo-close:hover {
+        background: rgba(255, 255, 255, 0.28);
+      }
+
+      body.tv .topbar,
+      body.tv .tabs-row,
+      body.tv .page-head p,
+      body.tv #view-calendrier,
+      body.tv #view-equipe,
+      body.tv #view-photos,
+      body.tv .tv-hide {
+        display: none;
+      }
+      body.tv .grid.live {
+        grid-template-columns: repeat(var(--tv-cols, 2), minmax(0, 1fr));
+        gap: 22px;
+      }
+      body.tv .page-head {
+        padding: 22px 0 10px;
+      }
+      body.tv .match-body {
+        padding: 30px 26px;
+      }
+      body.tv .match-head,
+      body.tv .match-foot {
+        padding-inline: 26px;
+        font-size: 0.95rem;
+      }
+      body.tv .scores {
+        font-size: clamp(2.4rem, 13.5cqw, 5.5rem);
+      }
+      body.tv .team-name {
+        font-size: clamp(1.05rem, 5.2cqw, 1.95rem);
+      }
+      body.tv .clock {
+        font-size: 2rem;
+      }
+      body.tv .wrap {
+        max-width: none;
+        padding-inline: 26px;
+      }
+      /* Le mode écran géant est réservé à l'organisation : aucun bouton pour y
+         entrer sur l'écran public, seulement de quoi en sortir une fois dedans. */
+      #tv-exit {
+        display: none;
+      }
+      body.tv #tv-exit {
+        display: block;
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 90;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        opacity: 0.25;
+        transition: opacity 0.2s;
+        box-shadow: var(--shadow);
+      }
+      body.tv #tv-exit:hover {
+        opacity: 1;
+        color: var(--text);
+        border-color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">
+          <img class="logo" src="/logo.jpg" alt="Jeunesse Mortier a.s.b.l." />
+          <span>
+            <span data-tournament-name>Tournoi de Volley Mortier</span>
+            <small data-tournament-sub>suivi en direct</small>
+          </span>
+        </a>
+        <!-- Aucun lien vers l'arbitrage ni l'administration : les joueurs ne
+             doivent pas y accéder. Les arbitres passent par un QR code, et
+             l'organisation connaît son adresse. -->
+        <div class="conn" style="margin-left: auto"><i class="dot"></i><span>connexion…</span></div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="page-head">
+        <div class="head-line">
+          <img class="tv-logo" src="/logo.jpg" alt="" />
+          <div>
+            <div class="tv-title" data-tournament-name></div>
+            <h1>Suivi en direct</h1>
+          </div>
+        </div>
+        <p>Les scores, les chronos et les classements se mettent à jour tout seuls.</p>
+        <div class="hero-stats" id="hero-stats"></div>
+      </div>
+
+      <div class="row tabs-row" style="margin-bottom: 4px">
+        <button class="tab active" data-view="direct">En direct</button>
+        <button class="tab" data-view="calendrier">Calendrier</button>
+        <button class="tab" data-view="classements">Classements</button>
+        <button class="tab" data-view="equipe">Mon équipe</button>
+        <button class="tab" data-view="photos">Photos</button>
+      </div>
+
+      <section id="view-direct"></section>
+      <section id="view-calendrier" hidden></section>
+      <section id="view-classements" hidden></section>
+      <section id="view-equipe" hidden></section>
+      <section id="view-photos" hidden></section>
+    </main>
+
+    <!-- Sortie du mode écran géant : n'existe que quand on y est déjà, donc
+         invisible pour les joueurs qui n'y accèdent pas. -->
+    <button id="tv-exit" title="Quitter le mode écran géant (Échap)">✕ Quitter l'écran géant</button>
+
+    <script type="module" src="/js/live.js"></script>
+  </body>
+</html>

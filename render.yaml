@@ -1,0 +1,14 @@
+# Déploiement Render (offre gratuite).
+# Sur render.com : New > Blueprint, pointe vers ce dépôt, valide.
+services:
+  - type: web
+    name: tournoi-volley-mortier
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false # à saisir dans l'interface Render
+      - key: REFEREE_PIN
+        sync: false
