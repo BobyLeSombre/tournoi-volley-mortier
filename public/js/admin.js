@@ -539,13 +539,51 @@ function renderBracket(state) {
   );
 }
 
-/** Modération de la galerie : voir les photos, en retirer une déplacée. */
+/** Téléchargement de toutes les photos en un ZIP, pour les garder à coup sûr. */
+async function downloadPhotosZip(btn) {
+  btn.disabled = true;
+  const libelle = btn.textContent;
+  btn.textContent = 'Préparation du ZIP…';
+  try {
+    const res = await fetch('/api/photos/export', { headers: { 'x-admin-password': pwd } });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || 'Téléchargement impossible');
+    }
+    const blob = await res.blob();
+    const a = el('a', {
+      href: URL.createObjectURL(blob),
+      download: `photos-tournoi-${new Date().toISOString().slice(0, 10)}.zip`,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Photos téléchargées ✓');
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = libelle;
+  }
+}
+
+/** Modération de la galerie + sauvegarde de toutes les photos. */
 function renderPhotos(state) {
   const wrap = el('div', { class: 'panel' }, [
     el('h2', { text: 'Photos' }),
     el('p', { class: 'hint' }, [
       'Les joueurs publient leurs photos depuis l’onglet Photos de l’écran public. ' +
-        'Tu peux en retirer une ici si besoin.',
+        'Tu peux en retirer une ici, et surtout les sauvegarder toutes en un fichier.',
+    ]),
+    el('div', { class: 'row', style: 'margin-bottom:14px' }, [
+      el('button', {
+        class: 'btn primary',
+        text: '⬇ Télécharger toutes les photos (ZIP)',
+        onClick: (e) => downloadPhotosZip(e.currentTarget),
+      }),
+    ]),
+    el('p', { class: 'hint', style: 'margin:-6px 0 14px;color:var(--warn)' }, [
+      'Important : sur l’hébergement gratuit, les photos sont perdues si le site ' +
+        'est remis en ligne. Télécharge-les régulièrement, et à la fin du tournoi.',
     ]),
     el('div', { class: 'mod-grid', text: 'Chargement…' }),
   ]);

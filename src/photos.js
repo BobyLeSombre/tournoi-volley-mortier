@@ -95,6 +95,31 @@ export function add({ full, thumb }) {
   return { id };
 }
 
+export function count() {
+  return list.length;
+}
+
+/**
+ * Prépare les photos pour un ZIP de sauvegarde : uniquement les vraies photos
+ * (pas les vignettes), en ordre chronologique, renommées lisiblement avec la
+ * date de prise de vue.
+ */
+export function exportBuffers() {
+  return list
+    .map((p, i) => {
+      const file = path.join(PHOTOS_DIR, `${p.id}.jpg`);
+      if (!fs.existsSync(file)) return null;
+      const d = new Date(p.at);
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}h${pad(d.getMinutes())}`;
+      return {
+        name: `photo-${String(i + 1).padStart(3, '0')}_${stamp}.jpg`,
+        buf: fs.readFileSync(file),
+      };
+    })
+    .filter(Boolean);
+}
+
 export function remove(id) {
   const before = list.length;
   list = list.filter((p) => p.id !== id);

@@ -11,6 +11,7 @@ import QRCode from 'qrcode-svg';
 import * as M from './src/model.js';
 import { loadState, save, flush } from './src/store.js';
 import * as Photos from './src/photos.js';
+import { createStoreZip } from './src/zip.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 5183;
@@ -238,6 +239,17 @@ app.get('/api/qr.svg', (req, res) => {
 
 app.get('/api/photos', (req, res) => {
   res.json(Photos.listPhotos());
+});
+
+// Sauvegarde : toutes les photos dans un ZIP. Réservé à l'organisation.
+app.get('/api/photos/export', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const files = Photos.exportBuffers();
+  if (!files.length) return fail(res, 400, 'Aucune photo à sauvegarder');
+  const zip = createStoreZip(files);
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="photos-tournoi-volley-mortier.zip"');
+  res.send(zip);
 });
 
 app.post('/api/photos', (req, res) => {
