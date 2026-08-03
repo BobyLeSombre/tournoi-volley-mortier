@@ -33,7 +33,9 @@ export function emptyState() {
       // Pas d'horaires : les matchs sont organisés en tours. Un tour démarre
       // quand l'organisation l'annonce, et se termine quand tous ses matchs
       // sont clôturés par les arbitres.
-      courts: ['Terrain 1', 'Terrain 2'],
+      // Six terrains par défaut : le format habituel du tournoi (24 équipes en
+      // 6 poules). Modifiable dans les réglages.
+      courts: ['Terrain 1', 'Terrain 2', 'Terrain 3', 'Terrain 4', 'Terrain 5', 'Terrain 6'],
       // Pas de barème de points : le classement se fait aux victoires, puis au
       // total des points marqués (voir public/js/standings.js).
       adminPassword: 'admin',
