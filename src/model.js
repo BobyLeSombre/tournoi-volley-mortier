@@ -167,6 +167,15 @@ export function currentRound(state) {
   return null; // tournoi terminé
 }
 
+/**
+ * Match d'un tour PLUS LOIN que le tour en cours : à verrouiller tant que le
+ * tour précédent n'est pas terminé sur tous les terrains.
+ */
+export function isFutureRound(state, match) {
+  const cur = currentRound(state);
+  return cur != null && (match.round ?? 0) > cur;
+}
+
 /** Avancement du tour en cours, pour savoir quand annoncer le suivant. */
 export function roundProgress(state) {
   const round = currentRound(state);

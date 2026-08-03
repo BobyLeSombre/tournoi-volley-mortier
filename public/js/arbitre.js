@@ -17,6 +17,7 @@ import {
   sideName,
   matchLabel,
   roundLabel,
+  currentRound,
   statusBadge,
   setTitle,
 } from './common.js';
@@ -113,12 +114,25 @@ function currentMatchOn(state, court) {
   return state.matches.find((m) => m.court === court && m.status !== 'finished') || null;
 }
 
+/**
+ * Un match d'un tour PLUS LOIN que le tour en cours : verrouillé tant que le
+ * tour précédent n'est pas terminé sur tous les terrains. Évite qu'un arbitre
+ * rapide lance un match que l'organisation n'a pas encore annoncé.
+ */
+function isFutureRound(state, m) {
+  if (!m) return false;
+  const cur = currentRound(state);
+  return cur != null && (m.round ?? 0) > cur;
+}
+
 function chooseCourt(state, court) {
   courtFilter = court;
   localStorage.setItem(COURT_KEY, court);
   claimCourt(court, pin); // les autres arbitres verront ce terrain occupé
   const next = currentMatchOn(state, court);
-  if (next) selectMatch(next.id);
+  // On n'ouvre le tableau de marque que si le match est jouable maintenant ;
+  // sinon on montre la liste (le match y apparaît verrouillé).
+  if (next && !isFutureRound(state, next)) selectMatch(next.id);
   else render(state);
 }
 
@@ -136,18 +150,27 @@ function courtTaken(court) {
 
 /** Écran d'accueil : une tuile par terrain, avec le match du moment. */
 function renderCourts(state) {
+  const cur = currentRound(state);
   const tiles = state.config.courts.map((court) => {
     const m = currentMatchOn(state, court);
     const live = m && (m.status === 'live' || m.status === 'paused');
     const pris = courtTaken(court);
+    // Terrain en avance : il a fini son match, mais le tour n'est pas terminé
+    // partout → on verrouille jusqu'à l'annonce du tour suivant.
+    const enAttente = !pris && isFutureRound(state, m);
+    const bloque = pris || enAttente;
 
     return el(
       'button',
       {
-        class: `court-tile${live ? ' is-live' : ''}${pris ? ' is-taken' : ''}`,
-        disabled: pris,
-        title: pris ? 'Un arbitre est déjà en place sur ce terrain' : null,
-        onClick: pris ? null : () => chooseCourt(state, court),
+        class: `court-tile${live ? ' is-live' : ''}${bloque ? ' is-taken' : ''}`,
+        disabled: bloque,
+        title: pris
+          ? 'Un arbitre est déjà en place sur ce terrain'
+          : enAttente
+            ? 'En attente de la fin du tour en cours sur les autres terrains'
+            : null,
+        onClick: bloque ? null : () => chooseCourt(state, court),
       },
       [
         el('span', { class: 'court-tile-name', text: court }),
@@ -161,11 +184,16 @@ function renderCourts(state) {
             ]),
         pris
           ? el('span', { class: 'court-tile-lock', text: '🔒 Arbitre en place' })
-          : live
-            ? el('span', { class: 'court-tile-score', text: `${m.scoreA} – ${m.scoreB}` })
-            : m
-              ? statusBadge(m)
-              : null,
+          : enAttente
+            ? el('span', {
+                class: 'court-tile-lock',
+                text: `🔒 Attends la fin du Tour ${cur + 1}`,
+              })
+            : live
+              ? el('span', { class: 'court-tile-score', text: `${m.scoreA} – ${m.scoreB}` })
+              : m
+                ? statusBadge(m)
+                : null,
       ]
     );
   });
@@ -226,18 +254,29 @@ function renderPicker(state) {
       el(
         'div',
         { class: 'card' },
-        list.map((m) =>
-          el('button', { class: 'picker-item', onClick: () => selectMatch(m.id) }, [
-            el('span', { class: 'time', text: roundLabel(m) }),
-            el('span', { class: 'names' }, [
-              `${sideName(state, m, 'A')} vs ${sideName(state, m, 'B')}`,
-              el('em', { text: `${m.court} · ${matchLabel(state, m)}` }),
-            ]),
-            m.status === 'finished'
-              ? el('span', { class: 'final-score', text: `${m.scoreA}–${m.scoreB}` })
-              : statusBadge(m),
-          ])
-        )
+        list.map((m) => {
+          const verrou = isFutureRound(state, m);
+          return el(
+            'button',
+            {
+              class: `picker-item${verrou ? ' locked' : ''}`,
+              disabled: verrou,
+              onClick: verrou ? null : () => selectMatch(m.id),
+            },
+            [
+              el('span', { class: 'time', text: roundLabel(m) }),
+              el('span', { class: 'names' }, [
+                `${sideName(state, m, 'A')} vs ${sideName(state, m, 'B')}`,
+                el('em', { text: `${m.court} · ${matchLabel(state, m)}` }),
+              ]),
+              verrou
+                ? el('span', { class: 'lock-tag', text: '🔒' })
+                : m.status === 'finished'
+                  ? el('span', { class: 'final-score', text: `${m.scoreA}–${m.scoreB}` })
+                  : statusBadge(m),
+            ]
+          );
+        })
       )
     );
   }
@@ -271,6 +310,26 @@ function renderBoard(state, m) {
       context,
       el('div', { class: 'empty' }, [
         `${sideName(state, m, 'A')} contre ${sideName(state, m, 'B')} — en attente des résultats précédents.`,
+      ])
+    );
+    return;
+  }
+
+  // Match d'un tour à venir : verrouillé tant que le tour en cours n'est pas
+  // terminé partout. On n'affiche pas le tableau de marque.
+  if (isFutureRound(state, m)) {
+    const cur = currentRound(state);
+    board.replaceChildren(
+      context,
+      el('div', { class: 'wait-box' }, [
+        el('div', { class: 'wait-lock', text: '🔒' }),
+        el('strong', { text: `${roundLabel(m)} — pas encore ouvert` }),
+        el('p', {
+          text:
+            `Ce match démarrera quand le Tour ${cur + 1} sera terminé sur tous les ` +
+            'terrains. Attends l’annonce de l’organisation.',
+        }),
+        el('button', { class: 'btn', text: '← Retour aux terrains', onClick: forgetCourt }),
       ])
     );
     return;
@@ -495,6 +554,15 @@ function nextMatchButton(state, current) {
     (m) => m.court === current.court && m.status === 'pending' && m.order > current.order
   );
   if (!next) return null;
+  // Le match suivant appartient au tour d'après : on ne le débloque qu'une fois
+  // le tour en cours terminé partout. En attendant, un message clair.
+  if (isFutureRound(state, next)) {
+    const cur = currentRound(state);
+    return el('div', { class: 'next-wait' }, [
+      `Prochain match : ${roundLabel(next)}. Il se débloquera dès que le Tour ${cur + 1} ` +
+        'sera terminé sur tous les terrains (annonce de l’organisation).',
+    ]);
+  }
   return el('button', {
     class: 'btn primary',
     text: 'Match suivant →',

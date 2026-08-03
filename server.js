@@ -297,11 +297,14 @@ app.post('/api/auth/admin', (req, res) => {
 
 // --------------------------------------------------------------- API arbitre
 
+const TOUR_A_VENIR = "Ce match appartient à un tour à venir — attends la fin du tour en cours.";
+
 app.post('/api/ref/match/:id/score', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
   if (match.status === 'finished') return fail(res, 409, 'Match déjà terminé');
+  if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
 
   const { team, delta, value } = req.body || {};
   if (team !== 'A' && team !== 'B') return fail(res, 400, 'Équipe invalide');
@@ -320,6 +323,7 @@ app.post('/api/ref/match/:id/timer', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
+  if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
   const { action, seconds } = req.body || {};
 
   if (action === 'start') M.startTimer(match);
@@ -340,6 +344,7 @@ app.post('/api/ref/match/:id/finish', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
+  if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
   // Pas de match nul en phase finale : point en or jusqu'à ce qu'on marque.
   if (match.stage && match.scoreA === match.scoreB) {
     return fail(res, 409, 'Égalité — en phase finale, point en or : le prochain point décide');
