@@ -327,6 +327,79 @@
         margin: -4px 0 16px;
       }
 
+      /* Finale aux sets : bandeau des sets gagnés + set en cours. */
+      .sets-header {
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      .sets-count {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 3rem;
+        font-weight: 850;
+        line-height: 1;
+      }
+      .sets-count .lead {
+        color: var(--accent);
+      }
+      .sets-sep {
+        font-size: 0.85rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        color: var(--dim);
+        font-family: var(--font);
+      }
+      .sets-info {
+        margin-top: 8px;
+        font-size: 0.82rem;
+        font-weight: 650;
+        color: var(--muted);
+      }
+      .setwins {
+        display: block;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: var(--accent-strong);
+        margin-top: 2px;
+      }
+      .sets-history {
+        margin-top: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .sets-history-title {
+        padding: 8px 14px;
+        background: var(--bg-soft);
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--dim);
+      }
+      .sets-hist-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 9px 14px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+      .sets-hist-score {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+      }
+
       .timer-box {
         background: var(--surface);
         border: 1px solid var(--line-soft);

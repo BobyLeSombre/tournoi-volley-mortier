@@ -288,6 +288,101 @@ function renderPicker(state) {
   picker.replaceChildren(...out);
 }
 
+// ---------------------------------------------------- tableau de marque : sets
+
+/** Points à atteindre pour le set en cours (15 au set décisif). */
+function setTarget(m) {
+  const decider = m.setsA === m.setsToWin - 1 && m.setsB === m.setsToWin - 1;
+  return decider ? m.pointsDecider : m.pointsSet;
+}
+
+function renderSetsBoard(state, m, context) {
+  const finished = m.status === 'finished';
+  const nameA = teamName(state, m.teamAId);
+  const nameB = teamName(state, m.teamBId);
+  const setNo = m.sets.length + 1;
+
+  const header = el('div', { class: 'sets-header' }, [
+    el('div', { class: 'sets-count' }, [
+      el('span', { class: m.setsA > m.setsB ? 'lead' : '', text: String(m.setsA) }),
+      el('span', { class: 'sets-sep', text: 'SETS' }),
+      el('span', { class: m.setsB > m.setsA ? 'lead' : '', text: String(m.setsB) }),
+    ]),
+    el('div', {
+      class: 'sets-info',
+      text: finished
+        ? 'Finale terminée — 3 sets gagnés'
+        : `Set ${setNo} sur 5 · jusqu'à ${setTarget(m)} points (2 d'écart)`,
+    }),
+  ]);
+
+  const side = (team) => {
+    const nm = team === 'A' ? nameA : nameB;
+    const pts = team === 'A' ? m.scoreA : m.scoreB;
+    const setsW = team === 'A' ? m.setsA : m.setsB;
+    return el('div', { class: 'team-panel' }, [
+      el('div', { class: 'label' }, [
+        nm,
+        el('span', { class: 'setwins', text: `${setsW} set${setsW > 1 ? 's' : ''}` }),
+      ]),
+      el('button', {
+        class: 'plus',
+        text: String(pts),
+        disabled: finished,
+        onClick: () => {
+          if (navigator.vibrate) navigator.vibrate(12);
+          addPoint(m, team, 1);
+        },
+      }),
+      finished
+        ? null
+        : el('button', { class: 'minus', text: '− retirer 1 point', onClick: () => addPoint(m, team, -1) }),
+    ]);
+  };
+
+  const historique = m.sets.length
+    ? el('div', { class: 'sets-history' }, [
+        el('div', { class: 'sets-history-title', text: 'Sets joués' }),
+        ...m.sets.map((st, i) =>
+          el('div', { class: 'sets-hist-row' }, [
+            el('span', { text: `Set ${i + 1}` }),
+            el('span', {
+              class: 'sets-hist-score',
+              text: `${st.a} – ${st.b}`,
+            }),
+          ])
+        ),
+      ])
+    : null;
+
+  const out = [
+    context,
+    header,
+    el('div', { class: 'scoreboard' }, [side('A'), side('B')]),
+    finished ? null : el('div', { class: 'tap-hint', text: 'Touche le score pour ajouter un point' }),
+    historique,
+  ];
+
+  if (finished) {
+    const gagnant = m.winnerId === m.teamAId ? 'A' : 'B';
+    out.push(
+      el('div', { class: 'confirm-box' }, [
+        el('p', { class: 'win', text: `🏆 Vainqueur : ${teamName(state, m.winnerId)}` }),
+        el('div', { class: 'row', style: 'justify-content:center' }, [
+          el('button', {
+            class: 'btn',
+            text: 'Corriger (rouvrir le dernier set)',
+            onClick: () => addPoint(m, gagnant, -1),
+          }),
+          el('button', { class: 'btn ghost', text: 'Changer de terrain', onClick: forgetCourt }),
+        ]),
+      ])
+    );
+  }
+
+  board.replaceChildren(...out.filter(Boolean));
+}
+
 // -------------------------------------------------------- tableau de marque
 
 function renderBoard(state, m) {
@@ -332,6 +427,12 @@ function renderBoard(state, m) {
         el('button', { class: 'btn', text: '← Retour aux terrains', onClick: forgetCourt }),
       ])
     );
+    return;
+  }
+
+  // Finale aux sets : tableau de marque dédié (sets + set en cours, sans chrono).
+  if (m.format === 'sets') {
+    renderSetsBoard(state, m, context);
     return;
   }
 

@@ -231,6 +231,7 @@ export function statusBadge(m) {
 
 /** « P1 » / « P2 » — n'a de sens que si le match compte plusieurs périodes. */
 export function periodBadge(m) {
+  if (m.format === 'sets') return null; // la finale n'a pas de périodes
   if ((m.periods || 1) < 2 || m.status === 'finished') return null;
   return el('span', { class: 'badge', text: `P${m.period || 1}/${m.periods}` });
 }

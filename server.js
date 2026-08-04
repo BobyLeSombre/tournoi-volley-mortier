@@ -303,11 +303,21 @@ app.post('/api/ref/match/:id/score', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
-  if (match.status === 'finished') return fail(res, 409, 'Match déjà terminé');
   if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
 
   const { team, delta, value } = req.body || {};
   if (team !== 'A' && team !== 'B') return fail(res, 400, 'Équipe invalide');
+
+  // Finale aux sets : la clôture des sets et du match est automatique.
+  if (M.isSetMatch(match)) {
+    if (Number(delta) > 0) M.addSetPoint(match, team);
+    else if (Number(delta) < 0) M.removeSetPoint(match, team);
+    else return fail(res, 400, 'Point aux sets : +1 ou -1 seulement');
+    commit(match);
+    return res.json({ ok: true, match });
+  }
+
+  if (match.status === 'finished') return fail(res, 409, 'Match déjà terminé');
   const key = team === 'A' ? 'scoreA' : 'scoreB';
   const next = value != null ? Number(value) : match[key] + Number(delta || 0);
   match[key] = Math.max(0, Math.min(999, Math.round(next) || 0));
@@ -323,6 +333,7 @@ app.post('/api/ref/match/:id/timer', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
+  if (M.isSetMatch(match)) return fail(res, 409, 'La finale se joue aux sets, sans chrono');
   if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
   const { action, seconds } = req.body || {};
 
@@ -344,6 +355,7 @@ app.post('/api/ref/match/:id/finish', (req, res) => {
   if (!requireRef(req, res)) return;
   const match = getMatch(req, res);
   if (!match) return;
+  if (M.isSetMatch(match)) return fail(res, 409, 'La finale se termine automatiquement au 3e set gagné');
   if (M.isFutureRound(state, match)) return fail(res, 409, TOUR_A_VENIR);
   // Pas de match nul en phase finale : point en or jusqu'à ce qu'on marque.
   if (match.stage && match.scoreA === match.scoreB) {
@@ -680,6 +692,14 @@ app.post('/api/admin/demo', (req, res) => {
   }
 
   const play = (m, noDraw) => {
+    // Finale aux sets : on simule point par point jusqu'au 3e set gagné.
+    if (M.isSetMatch(m)) {
+      let garde = 0;
+      while (m.status !== 'finished' && garde++ < 800) {
+        M.addSetPoint(m, Math.random() < 0.55 ? 'A' : 'B');
+      }
+      return;
+    }
     let a = 15 + Math.floor(Math.random() * 11);
     let b = 8 + Math.floor(Math.random() * 12);
     if (noDraw && a === b) a += 1;

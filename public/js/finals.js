@@ -60,11 +60,20 @@ const STAGES = [
 
 function bracketSlot(state, m, side) {
   const id = side === 'A' ? m.teamAId : m.teamBId;
-  const score = side === 'A' ? m.scoreA : m.scoreB;
   const finished = m.status === 'finished';
   const live = m.status === 'live' || m.status === 'paused';
   const gagnant = finished && m.winnerId === id && m.winnerId !== 'draw';
   const perdant = finished && m.winnerId && m.winnerId !== id && m.winnerId !== 'draw';
+
+  // La finale s'affiche en sets gagnés ; les autres matchs en points.
+  const score =
+    m.format === 'sets'
+      ? side === 'A'
+        ? m.setsA
+        : m.setsB
+      : side === 'A'
+        ? m.scoreA
+        : m.scoreB;
 
   return el('div', { class: `bm-slot${gagnant ? ' win' : ''}${perdant ? ' lose' : ''}` }, [
     el('span', { class: 'bm-team', text: sideName(state, m, side) }),

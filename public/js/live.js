@@ -79,13 +79,19 @@ function matchCard(state, m, { big = false } = {}) {
   const aWins = finished && m.winnerId === m.teamAId;
   const bWins = finished && m.winnerId === m.teamBId;
 
+  const sets = m.format === 'sets';
+
   const head = el('div', { class: 'match-head' }, [
     el('span', { class: 'court', text: m.court }),
     el('span', { class: 'spacer' }),
     el('span', { text: matchLabel(state, m) }),
-    periodBadge(m),
+    sets ? el('span', { class: 'badge', text: '3 sets gagnants' }) : periodBadge(m),
     statusBadge(m),
   ]);
+
+  // La finale affiche les SETS gagnés en gros ; le score du set en cours va au pied.
+  const bigA = sets ? m.setsA : m.scoreA;
+  const bigB = sets ? m.setsB : m.scoreB;
 
   const body = el('div', { class: 'match-body' }, [
     el('div', { class: 'side a' }, [
@@ -95,9 +101,9 @@ function matchCard(state, m, { big = false } = {}) {
       }),
     ]),
     el('div', { class: 'scores' }, [
-      el('span', { class: `score${aWins ? ' win' : ''}`, text: String(m.scoreA) }),
+      el('span', { class: `score${aWins ? ' win' : ''}`, text: String(bigA) }),
       el('span', { class: 'sep', text: '–' }),
-      el('span', { class: `score${bWins ? ' win' : ''}`, text: String(m.scoreB) }),
+      el('span', { class: `score${bWins ? ' win' : ''}`, text: String(bigB) }),
     ]),
     el('div', { class: 'side b' }, [
       el('div', {
@@ -112,7 +118,12 @@ function matchCard(state, m, { big = false } = {}) {
     footText =
       m.winnerId === 'draw'
         ? 'Match nul'
-        : `Victoire ${teamName(state, m.winnerId)}`;
+        : `Victoire ${teamName(state, m.winnerId)}${sets ? ' (3 sets gagnés)' : ''}`;
+  } else if (sets) {
+    footText =
+      m.status === 'pending'
+        ? `${roundLabel(m)} — au lancement de l'organisation`
+        : `Set ${m.sets.length + 1} en cours : ${m.scoreA} – ${m.scoreB}`;
   } else if (isInterval(m)) {
     footText = `Fin de la période ${m.period} — changement de côté`;
   } else if (m.status === 'live' && left <= 0) {
@@ -124,7 +135,7 @@ function matchCard(state, m, { big = false } = {}) {
   }
 
   const foot = el('div', { class: 'match-foot' }, [
-    finished ? null : el('span', { class: clockClass(left, m.status), text: fmtClock(left) }),
+    finished || sets ? null : el('span', { class: clockClass(left, m.status), text: fmtClock(left) }),
     el('span', { text: footText }),
   ]);
 
@@ -250,7 +261,10 @@ function matchLine(state, m, subText, statusEl) {
 
 function scoreOrBadge(m) {
   if (m.status === 'finished') {
-    return el('span', { class: 'ml-score', text: `${m.scoreA} – ${m.scoreB}` });
+    // La finale se lit en sets gagnés.
+    const a = m.format === 'sets' ? m.setsA : m.scoreA;
+    const b = m.format === 'sets' ? m.setsB : m.scoreB;
+    return el('span', { class: 'ml-score', text: `${a} – ${b}` });
   }
   return statusBadge(m);
 }

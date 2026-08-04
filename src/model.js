@@ -239,6 +239,95 @@ export function reopenMatch(match) {
   match.period = match.periods || 1; // on rouvre sur la dernière période
 }
 
+// ------------------------------------------------------- matchs aux sets
+
+// La finale se joue « 3 sets gagnants » : premier à 3 sets (au meilleur des 5),
+// sets à 25 points avec 2 d'écart, 5e set décisif à 15.
+export const SETS_FORMAT = { setsToWin: 3, pointsSet: 25, pointsDecider: 15, lead: 2 };
+
+export function isSetMatch(match) {
+  return match?.format === 'sets';
+}
+
+/** Transforme un match en match aux sets (utilisé pour la finale). */
+export function makeSetsMatch(match, opts = {}) {
+  const cfg = { ...SETS_FORMAT, ...opts };
+  match.format = 'sets';
+  match.setsToWin = cfg.setsToWin;
+  match.pointsSet = cfg.pointsSet;
+  match.pointsDecider = cfg.pointsDecider;
+  match.lead = cfg.lead;
+  match.sets = []; // sets terminés : [{ a, b }]
+  match.setsA = 0;
+  match.setsB = 0;
+  match.scoreA = 0; // points du set EN COURS
+  match.scoreB = 0;
+  return match;
+}
+
+/** Nombre de points à atteindre pour le set en cours (15 au set décisif). */
+export function currentSetTarget(match) {
+  const decider = match.setsA === match.setsToWin - 1 && match.setsB === match.setsToWin - 1;
+  return decider ? match.pointsDecider : match.pointsSet;
+}
+
+const setWon = (s, o, target, lead) => s >= target && s - o >= lead;
+
+/**
+ * Ajoute un point au set en cours. Clôt le set automatiquement dès qu'une
+ * équipe atteint la cible avec 2 d'écart, et termine le match au 3e set gagné.
+ */
+export function addSetPoint(match, team, now = Date.now()) {
+  if (match.status === 'finished') return;
+  if (match.status === 'pending') match.status = 'live';
+  if (team === 'A') match.scoreA++;
+  else match.scoreB++;
+
+  const target = currentSetTarget(match);
+  const aWon = setWon(match.scoreA, match.scoreB, target, match.lead);
+  const bWon = setWon(match.scoreB, match.scoreA, target, match.lead);
+  if (!aWon && !bWon) return;
+
+  match.sets.push({ a: match.scoreA, b: match.scoreB });
+  if (aWon) match.setsA++;
+  else match.setsB++;
+  match.scoreA = 0;
+  match.scoreB = 0;
+
+  if (match.setsA >= match.setsToWin || match.setsB >= match.setsToWin) {
+    match.status = 'finished';
+    match.finishedAt = now;
+    match.winnerId = match.setsA > match.setsB ? match.teamAId : match.teamBId;
+  }
+}
+
+/**
+ * Retire un point. Sur le set en cours si possible ; sinon rouvre le dernier
+ * set clôturé (l'arbitre corrige une erreur de fin de set).
+ */
+export function removeSetPoint(match, team) {
+  const cur = team === 'A' ? match.scoreA : match.scoreB;
+  if (cur > 0) {
+    if (team === 'A') match.scoreA--;
+    else match.scoreB--;
+    return;
+  }
+  // Set en cours à 0 de ce côté : on rouvre le dernier set terminé.
+  if (match.scoreA === 0 && match.scoreB === 0 && match.sets.length) {
+    const dernier = match.sets.pop();
+    if (dernier.a > dernier.b) match.setsA = Math.max(0, match.setsA - 1);
+    else match.setsB = Math.max(0, match.setsB - 1);
+    match.scoreA = dernier.a;
+    match.scoreB = dernier.b;
+    if (team === 'A' && match.scoreA > 0) match.scoreA--;
+    else if (team === 'B' && match.scoreB > 0) match.scoreB--;
+    // Le match n'est plus terminé si on rouvre un set.
+    match.status = 'live';
+    match.finishedAt = null;
+    match.winnerId = null;
+  }
+}
+
 // ---------------------------------------------------------------- calendrier
 
 /**
@@ -464,6 +553,7 @@ export function generateBracket(state) {
       });
       m.stage = stage;
       m.slot = slot;
+      if (stage === 'finale') makeSetsMatch(m); // la finale se joue aux sets
       if (prev) {
         m.srcA = { matchId: prev[2 * slot].id, take: 'winner' };
         m.srcB = { matchId: prev[2 * slot + 1].id, take: 'winner' };
