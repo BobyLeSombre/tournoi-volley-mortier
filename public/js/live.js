@@ -34,6 +34,10 @@ const views = {
 };
 let currentView = 'direct';
 
+// Lien direct vers un onglet (ex. « Ouvrir l'écran public » de la démo vers la
+// phase finale). Honoré une fois que l'onglet visé est disponible.
+let wantedTab = new URLSearchParams(location.search).get('tab');
+
 document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     currentView = tab.dataset.view;
@@ -623,6 +627,15 @@ function renderAll(state) {
   const finaleTab = document.querySelector('.tab[data-view="finale"]');
   if (finaleTab) finaleTab.hidden = !hasBracket(state);
   if (currentView === 'finale' && !hasBracket(state)) selectTab('direct');
+
+  // Ouverture directe sur un onglet demandé (?tab=), dès qu'il est visible.
+  if (wantedTab) {
+    const target = document.querySelector(`.tab[data-view="${wantedTab}"]`);
+    if (target && !target.hidden) {
+      wantedTab = null;
+      target.click();
+    }
+  }
 
   celebrerSiChampion(state);
 

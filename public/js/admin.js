@@ -634,6 +634,32 @@ function renderDanger(state) {
     el('p', { class: 'hint' }, [
       'Exporte le tournoi avant de commencer : en cas de pépin tu réimportes le fichier et tout revient.',
     ]),
+
+    el('div', { class: 'demo-box' }, [
+      el('strong', { text: '🎬 Aperçu : tournoi de démo' }),
+      el('p', {
+        text:
+          'Charge un tournoi complet déjà joué jusqu’au champion, pour voir le podium ' +
+          'et le tableau. Ça remplace le tournoi actuel — à faire seulement pour tester.',
+      }),
+      el('button', {
+        class: 'btn',
+        text: 'Charger la démo',
+        onClick: async () => {
+          if (!confirm('Charger un tournoi de démo ? Cela remplace le tournoi actuel.')) return;
+          await post('/api/admin/demo', {});
+          toast('Démo chargée ✓ — ouvre l’écran public, onglet « Phase finale »');
+        },
+      }),
+      el('a', {
+        class: 'btn ghost',
+        href: '/?tab=finale',
+        target: '_blank',
+        rel: 'noopener',
+        text: 'Ouvrir l’écran public →',
+      }),
+    ]),
+
     el('div', { class: 'row' }, [
       el('button', {
         class: 'btn',

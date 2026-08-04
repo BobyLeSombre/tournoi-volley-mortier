@@ -653,6 +653,59 @@ app.post('/api/admin/import', (req, res) => {
   res.json({ ok: true });
 });
 
+// Charge un tournoi de démonstration entièrement joué (jusqu'au champion), pour
+// prévisualiser le podium et le tableau sans jouer 60 matchs à la main.
+const DEMO_TEAMS = [
+  'Les Loups Argentés', 'Chasseurs d\'Orage', 'Les Titans Verts', 'Les Lynx Sauvages',
+  'Les Faucons d\'Acier', 'Les Phénix Blancs', 'Les Étoiles Filantes', 'Aigles du Sommet',
+  'Team Horizon', 'Griffons Dorés', 'Dragons Écarlates', 'Panthères de Minuit',
+  'Les Requins Blancs', 'Cobras Venimeux', 'Les Ours Polaires', 'Scorpions du Désert',
+  'Les Vipères Bleues', 'Rhinocéros Furieux', 'Guépards Rapides', 'Bisons Sauvages',
+  'Les Corbeaux Noirs', 'Hiboux de la Nuit', 'Loutres Joyeuses', 'Manchots Empereurs',
+];
+
+app.post('/api/admin/demo', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const s = M.emptyState();
+  // On conserve identité et identifiants du tournoi en cours.
+  for (const k of ['name', 'subtitle', 'adminPassword', 'refereePin']) s.config[k] = state.config[k];
+  s.config.courts = ['Terrain 1', 'Terrain 2', 'Terrain 3', 'Terrain 4', 'Terrain 5', 'Terrain 6'];
+
+  let n = 0;
+  for (let p = 0; p < 6; p++) {
+    const pool = { id: M.newId('p'), name: `Poule ${String.fromCharCode(65 + p)}` };
+    s.pools.push(pool);
+    for (let t = 0; t < 4; t++) s.teams.push({ id: M.newId('t'), name: DEMO_TEAMS[n++], poolId: pool.id });
+  }
+
+  const play = (m, noDraw) => {
+    let a = 15 + Math.floor(Math.random() * 11);
+    let b = 8 + Math.floor(Math.random() * 12);
+    if (noDraw && a === b) a += 1;
+    m.scoreA = a;
+    m.scoreB = b;
+    M.finishMatch(s, m);
+  };
+
+  M.generateSchedule(s);
+  for (const m of s.matches.filter((x) => x.poolId)) play(m, false);
+
+  const gen = M.generateBracket(s);
+  if (gen.error) return fail(res, 400, gen.error);
+  for (const stage of ['8e', 'quart', 'demi', 'finale', 'petite']) {
+    M.propagateBracket(s);
+    for (const m of s.matches.filter((x) => x.stage === stage)) play(m, true);
+  }
+  M.propagateBracket(s);
+
+  state = s;
+  for (const t of timers.values()) clearTimeout(t);
+  timers.clear();
+  commit();
+  res.json({ ok: true });
+});
+
 app.post('/api/admin/reset', (req, res) => {
   if (!requireAdmin(req, res)) return;
   const scope = req.body?.scope;
