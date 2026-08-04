@@ -603,18 +603,35 @@
         overflow-x: auto;
         padding-bottom: 10px;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
       }
+      /* Indication de défilement : visible seulement quand l'arbre dépasse. */
+      .bracket-hint {
+        text-align: center;
+        font-size: 0.76rem;
+        font-weight: 650;
+        color: var(--accent-strong);
+        margin-bottom: 8px;
+      }
+      @media (min-width: 720px) {
+        .bracket-hint {
+          display: none;
+        }
+      }
+      /* width:max-content force l'arbre à faire la largeur de toutes ses
+         colonnes réunies : c'est ce qui rend le défilement horizontal possible
+         quand ça dépasse l'écran (colonnes en largeur fixe, jamais compressées). */
       .bracket {
         display: flex;
         gap: 12px;
-        min-width: min-content;
+        width: max-content;
         align-items: stretch;
       }
       .br-col {
         display: flex;
         flex-direction: column;
-        flex: 1;
-        min-width: 152px;
+        flex: none;
+        width: 164px;
       }
       .br-col-head {
         text-align: center;
@@ -794,6 +811,16 @@
       }
       body.tv .podium-step.third .podium-bar {
         height: 90px;
+      }
+      body.tv .br-col {
+        width: 220px;
+      }
+      body.tv .bm-slot {
+        padding: 11px 14px;
+        font-size: 1rem;
+      }
+      body.tv .br-col-head {
+        font-size: 0.95rem;
       }
     </style>
   </head>
