@@ -3,6 +3,7 @@
 import {
   connect,
   onState,
+  store,
   el,
   remainingMs,
   fmtClock,
@@ -21,11 +22,13 @@ import {
 } from './common.js';
 import { computeStandings, teamProfile } from './standings.js';
 import { showGallery, syncGallery } from './gallery.js';
+import { hasBracket, podium, renderFinals, renderPodium, confettiBurst } from './finals.js';
 
 const views = {
   direct: document.getElementById('view-direct'),
   calendrier: document.getElementById('view-calendrier'),
   classements: document.getElementById('view-classements'),
+  finale: document.getElementById('view-finale'),
   equipe: document.getElementById('view-equipe'),
   photos: document.getElementById('view-photos'),
 };
@@ -38,6 +41,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     for (const [name, node] of Object.entries(views)) node.hidden = name !== currentView;
     // La galerie n'est montée que lorsqu'on ouvre son onglet.
     if (currentView === 'photos') showGallery(views.photos);
+    if (currentView === 'finale' && store.state) renderFinals(views.finale, store.state);
   });
 });
 
@@ -175,7 +179,15 @@ function renderDirect(state) {
   const next = state.matches.filter((m) => m.status === 'pending').slice(0, 6);
   const done = state.matches.filter((m) => m.status === 'finished').slice(-6).reverse();
 
-  const out = [roundBanner(state)].filter(Boolean);
+  // Tournoi terminé avec un champion : le podium prend la tête de l'écran
+  // (visible aussi sur l'écran géant). Sinon, la bannière du tour en cours.
+  const out = [];
+  const pod = renderPodium(state);
+  if (pod) out.push(pod);
+  else {
+    const banner = roundBanner(state);
+    if (banner) out.push(banner);
+  }
 
   if (live.length) {
     out.push(sectionTitle('Matchs en cours', `${live.length} terrain${live.length > 1 ? 's' : ''}`));
@@ -591,19 +603,46 @@ function stat(value, label) {
   return el('div', {}, [el('b', { text: String(value) }), ` ${label}`]);
 }
 
+// Le sacre : on déclenche les confettis une seule fois, quand la finale se
+// termine — quel que soit l'onglet ouvert.
+let sacreCelebre = false;
+function celebrerSiChampion(state) {
+  const champion = !!podium(state);
+  if (champion && !sacreCelebre) {
+    sacreCelebre = true;
+    confettiBurst();
+  }
+  if (!champion) sacreCelebre = false; // reset si l'admin rouvre la finale
+}
+
 function renderAll(state) {
   setTitle(state);
   document.title = `${state.config.name} — en direct`;
+
+  // L'onglet « Phase finale » n'apparaît qu'une fois le tableau généré.
+  const finaleTab = document.querySelector('.tab[data-view="finale"]');
+  if (finaleTab) finaleTab.hidden = !hasBracket(state);
+  if (currentView === 'finale' && !hasBracket(state)) selectTab('direct');
+
+  celebrerSiChampion(state);
+
   renderStats(state);
   renderDirect(state);
   renderCalendrier(state);
   renderClassements(state);
+  if (hasBracket(state) && !views.finale.hidden) renderFinals(views.finale, state);
   // La galerie se recharge seule si de nouvelles photos sont arrivées (juste
   // un compteur comparé ; aucune image ne transite par le WebSocket).
   syncGallery();
   // Ne pas re-render la fiche pendant qu'un joueur tape sa recherche.
   if (document.activeElement?.classList?.contains('team-search')) return;
   renderEquipe(state);
+}
+
+/** Bascule programmatique d'onglet (même effet qu'un clic). */
+function selectTab(view) {
+  const tab = document.querySelector(`.tab[data-view="${view}"]`);
+  if (tab) tab.click();
 }
 
 onState(renderAll);

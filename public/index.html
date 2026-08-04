@@ -597,6 +597,204 @@
         color: var(--text);
         border-color: var(--accent);
       }
+
+      /* ------------------------------------------------ Phase finale : arbre */
+      .bracket-scroll {
+        overflow-x: auto;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .bracket {
+        display: flex;
+        gap: 12px;
+        min-width: min-content;
+        align-items: stretch;
+      }
+      .br-col {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 152px;
+      }
+      .br-col-head {
+        text-align: center;
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--dim);
+        margin-bottom: 10px;
+      }
+      .br-col-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        gap: 10px;
+      }
+      .bm {
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .bm.live {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(28, 148, 9, 0.18), var(--shadow);
+      }
+      .bm.champ {
+        border-color: #e0b000;
+        box-shadow: 0 0 0 2px rgba(255, 204, 51, 0.5), var(--shadow);
+      }
+      .bm-slot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        font-size: 0.82rem;
+      }
+      .bm-slot + .bm-slot {
+        border-top: 1px solid var(--line-soft);
+      }
+      .bm-team {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 650;
+      }
+      .bm-slot.win .bm-team {
+        font-weight: 800;
+        color: var(--accent-strong);
+      }
+      .bm-slot.lose .bm-team {
+        color: var(--dim);
+      }
+      .bm-score {
+        flex: none;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        font-size: 0.86rem;
+      }
+      .bm-slot.win .bm-score {
+        color: var(--accent);
+      }
+      .petite-final {
+        margin-top: 22px;
+        max-width: 260px;
+      }
+
+      /* ------------------------------------------------ Phase finale : podium */
+      .podium-wrap {
+        text-align: center;
+        padding: 6px 0 18px;
+      }
+      .podium-title {
+        font-size: clamp(1.2rem, 4.5vw, 1.7rem);
+        font-weight: 780;
+        margin-bottom: 22px;
+      }
+      .podium-title strong {
+        color: var(--accent-strong);
+      }
+      .podium-trophy {
+        font-size: 1.4em;
+        margin-right: 6px;
+      }
+      .podium {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 10px;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      .podium-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 150px;
+      }
+      .podium-medal {
+        font-size: 2rem;
+        line-height: 1;
+      }
+      .podium-name {
+        font-weight: 750;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+      }
+      .podium-bar {
+        width: 100%;
+        display: grid;
+        place-items: center;
+        border-radius: 10px 10px 0 0;
+        color: #5b4a00;
+        font-weight: 850;
+        font-size: 1.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-bottom: none;
+      }
+      .podium-step.first .podium-bar {
+        height: 120px;
+        background: linear-gradient(180deg, #ffe27a, #f2b90b);
+      }
+      .podium-step.second .podium-bar {
+        height: 84px;
+        background: linear-gradient(180deg, #e6e9ef, #b9c0cc);
+      }
+      .podium-step.third .podium-bar {
+        height: 58px;
+        background: linear-gradient(180deg, #f0b98a, #cd7f45);
+        color: #4a2a0e;
+      }
+      .podium-step.first .podium-name {
+        font-size: 1rem;
+      }
+
+      /* Confettis : plein écran, au-dessus de tout, sans bloquer les clics. */
+      .confetti-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 300;
+      }
+
+      /* Écran géant : podium et arbre en grand. */
+      body.tv .podium-title {
+        font-size: 2.4rem;
+      }
+      body.tv .podium {
+        max-width: 720px;
+        gap: 18px;
+      }
+      body.tv .podium-step {
+        max-width: 220px;
+      }
+      body.tv .podium-medal {
+        font-size: 3.2rem;
+      }
+      body.tv .podium-name {
+        font-size: 1.4rem;
+      }
+      body.tv .podium-step.first .podium-bar {
+        height: 190px;
+        font-size: 2.4rem;
+      }
+      body.tv .podium-step.second .podium-bar {
+        height: 130px;
+      }
+      body.tv .podium-step.third .podium-bar {
+        height: 90px;
+      }
     </style>
   </head>
   <body>
@@ -633,6 +831,7 @@
         <button class="tab active" data-view="direct">En direct</button>
         <button class="tab" data-view="calendrier">Calendrier</button>
         <button class="tab" data-view="classements">Classements</button>
+        <button class="tab" data-view="finale" hidden>Phase finale</button>
         <button class="tab" data-view="equipe">Mon équipe</button>
         <button class="tab" data-view="photos">Photos</button>
       </div>
@@ -640,6 +839,7 @@
       <section id="view-direct"></section>
       <section id="view-calendrier" hidden></section>
       <section id="view-classements" hidden></section>
+      <section id="view-finale" hidden></section>
       <section id="view-equipe" hidden></section>
       <section id="view-photos" hidden></section>
     </main>
