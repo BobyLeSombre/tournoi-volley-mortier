@@ -368,17 +368,7 @@ function matchRow(state, m) {
         el('option', { value: c, selected: c === m.court ? '' : null, text: c })
       )
     ),
-    el('span', {
-      class: `badge${m.status === 'live' ? ' live' : m.status === 'finished' ? ' finished' : ''}`,
-      text:
-        m.status === 'finished'
-          ? `${m.scoreA}–${m.scoreB}`
-          : m.status === 'live'
-            ? 'en cours'
-            : m.status === 'paused'
-              ? 'pause'
-              : 'à venir',
-    }),
+    scoreCell(state, m),
     el('button', {
       class: 'btn sm danger',
       text: '×',
@@ -386,6 +376,51 @@ function matchRow(state, m) {
         if (confirm('Supprimer ce match ?')) post('/api/admin/matches', { action: 'delete', id: m.id });
       },
     }),
+  ]);
+}
+
+/**
+ * Score d'un match dans la liste admin : éditable dès que le match a commencé
+ * (l'organisation peut corriger un score, même après la fin). La finale
+ * s'édite en sets gagnés.
+ */
+function scoreCell(state, m) {
+  if (m.status === 'pending') {
+    return el('span', { class: 'badge', text: 'à venir' });
+  }
+  const sets = m.format === 'sets';
+  const maxi = sets ? '3' : '99';
+  const inA = el('input', {
+    class: 'score-edit',
+    type: 'number',
+    min: '0',
+    max: maxi,
+    value: String(sets ? m.setsA : m.scoreA),
+  });
+  const inB = el('input', {
+    class: 'score-edit',
+    type: 'number',
+    min: '0',
+    max: maxi,
+    value: String(sets ? m.setsB : m.scoreB),
+  });
+  const save = async () => {
+    const va = Math.max(0, Number(inA.value) || 0);
+    const vb = Math.max(0, Number(inB.value) || 0);
+    const data = sets ? { setsA: va, setsB: vb } : { scoreA: va, scoreB: vb };
+    try {
+      await post('/api/admin/matches', { action: 'score', id: m.id, data });
+      toast('Score corrigé ✓');
+    } catch {
+      /* post affiche déjà l'erreur */
+    }
+  };
+  inA.addEventListener('change', save);
+  inB.addEventListener('change', save);
+  return el('span', { class: 'score-edit-wrap', title: sets ? 'Sets gagnés' : 'Score' }, [
+    inA,
+    el('span', { class: 'score-edit-sep', text: '–' }),
+    inB,
   ]);
 }
 

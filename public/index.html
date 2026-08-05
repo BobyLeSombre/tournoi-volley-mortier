@@ -599,55 +599,57 @@
       }
 
       /* ------------------------------------------------ Phase finale : arbre */
+      /* Sur mobile : les tours sont EMPILÉS verticalement (défilement naturel
+         vers le bas, aucun scroll horizontal). L'arbre côte à côte n'apparaît
+         que sur grand écran. */
       .bracket-scroll {
         overflow-x: auto;
-        padding-bottom: 10px;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
       }
-      /* Indication de défilement : visible seulement quand l'arbre dépasse. */
-      .bracket-hint {
-        text-align: center;
-        font-size: 0.76rem;
-        font-weight: 650;
-        color: var(--accent-strong);
-        margin-bottom: 8px;
-      }
-      @media (min-width: 720px) {
-        .bracket-hint {
-          display: none;
-        }
-      }
-      /* width:max-content force l'arbre à faire la largeur de toutes ses
-         colonnes réunies : c'est ce qui rend le défilement horizontal possible
-         quand ça dépasse l'écran (colonnes en largeur fixe, jamais compressées). */
       .bracket {
         display: flex;
-        gap: 12px;
-        width: max-content;
-        align-items: stretch;
+        flex-direction: column;
+        gap: 22px;
       }
       .br-col {
         display: flex;
         flex-direction: column;
-        flex: none;
-        width: 164px;
       }
       .br-col-head {
         text-align: center;
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         font-weight: 750;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: var(--dim);
         margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--line-soft);
       }
       .br-col-body {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: space-around;
-        gap: 10px;
+        gap: 8px;
+      }
+      @media (min-width: 760px) {
+        .br-col-head {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+        .bracket {
+          flex-direction: row;
+          width: max-content;
+          gap: 12px;
+          align-items: stretch;
+        }
+        .br-col {
+          width: 168px;
+        }
+        .br-col-body {
+          flex: 1;
+          justify-content: space-around;
+          gap: 10px;
+        }
       }
       .bm {
         border: 1px solid var(--line-soft);

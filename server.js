@@ -634,6 +634,35 @@ app.post('/api/admin/matches', (req, res) => {
       match.periods = Math.max(1, Math.min(5, Math.round(Number(data.periods)) || 1));
     }
     M.resequence(state);
+  } else if (action === 'score') {
+    // L'organisation corrige le score d'un match, même terminé.
+    const match = M.findMatch(state, id);
+    if (!match) return fail(res, 404, 'Match introuvable');
+
+    if (M.isSetMatch(match)) {
+      const a = Math.max(0, Math.min(match.setsToWin, Math.round(Number(data?.setsA)) || 0));
+      const b = Math.max(0, Math.min(match.setsToWin, Math.round(Number(data?.setsB)) || 0));
+      if (a === b) return fail(res, 400, 'La finale doit avoir un vainqueur (sets différents)');
+      match.setsA = a;
+      match.setsB = b;
+      match.scoreA = 0;
+      match.scoreB = 0;
+      const fini = a >= match.setsToWin || b >= match.setsToWin;
+      match.status = fini ? 'finished' : 'live';
+      match.finishedAt = fini ? match.finishedAt || Date.now() : null;
+      match.winnerId = fini ? (a > b ? match.teamAId : match.teamBId) : null;
+    } else {
+      const a = Math.max(0, Math.min(999, Math.round(Number(data?.scoreA)) || 0));
+      const b = Math.max(0, Math.min(999, Math.round(Number(data?.scoreB)) || 0));
+      if (match.stage && a === b) {
+        return fail(res, 400, 'Un match de phase finale doit avoir un vainqueur');
+      }
+      match.scoreA = a;
+      match.scoreB = b;
+      match.status = 'finished';
+      match.finishedAt = match.finishedAt || Date.now();
+      match.winnerId = a > b ? match.teamAId : b > a ? match.teamBId : 'draw';
+    }
   } else if (action === 'delete') {
     state.matches = state.matches.filter((m) => m.id !== id);
   } else if (action === 'deleteAll') {

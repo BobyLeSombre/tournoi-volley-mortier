@@ -106,7 +106,6 @@ export function renderBracket(state) {
   const petite = state.matches.find((m) => m.stage === 'petite');
 
   return el('div', {}, [
-    el('div', { class: 'bracket-hint', text: '← glisse pour voir tout le tableau →' }),
     el('div', { class: 'bracket-scroll' }, [el('div', { class: 'bracket' }, cols)]),
     petite
       ? el('div', { class: 'petite-final' }, [

@@ -149,6 +149,23 @@
         color: var(--accent-strong);
         border-color: rgba(28, 148, 9, 0.4);
       }
+      /* Score éditable dans la liste des matchs. */
+      .score-edit-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .score-edit {
+        width: 44px;
+        padding: 5px 4px;
+        text-align: center;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+      .score-edit-sep {
+        color: var(--dim);
+        font-weight: 700;
+      }
       .link-row {
         display: flex;
         align-items: center;
@@ -651,8 +668,9 @@
           </span>
         </a>
         <nav class="nav">
-          <a href="/">Écran public</a>
-          <a href="/arbitre.html">Arbitre</a>
+          <!-- Nouvel onglet : l'organisation garde son espace ouvert. -->
+          <a href="/" target="_blank" rel="noopener">Écran public ↗</a>
+          <a href="/arbitre.html" target="_blank" rel="noopener">Arbitre ↗</a>
         </nav>
         <div class="conn"><i class="dot"></i><span>connexion…</span></div>
       </div>

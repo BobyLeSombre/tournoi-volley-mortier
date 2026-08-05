@@ -486,15 +486,6 @@ function renderBoard(state, m) {
                   onClick: () => timer(m, 'start'),
                 }),
           el('button', { class: 'btn xl', text: '+1 min', onClick: () => timer(m, 'add', 60) }),
-          el('button', {
-            class: 'btn xl ghost wide',
-            text: '↺ Remettre à zéro',
-            onClick: () => {
-              if (confirm(`Remettre le chrono de la période ${m.period} à zéro ?`)) {
-                timer(m, 'reset');
-              }
-            },
-          }),
           // Filet de sécurité si l'arbitre a lancé la période suivante trop tôt.
           (m.period || 1) > 1 && !finished
             ? el('button', {
