@@ -47,7 +47,21 @@ app.use(
 );
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// Compression WebSocket : l'état (JSON répétitif) se compresse fortement, ce qui
+// allège la bande passante quand beaucoup de téléphones sont connectés (4G).
+// `noContextTakeover` = pas de contexte zlib conservé par connexion → mémoire
+// maîtrisée même avec de nombreux clients.
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  perMessageDeflate: {
+    threshold: 1024,
+    serverNoContextTakeover: true,
+    clientNoContextTakeover: true,
+    concurrencyLimit: 10,
+    zlibDeflateOptions: { level: 6 },
+  },
+});
 
 // ------------------------------------------------------------- diffusion live
 
@@ -98,7 +112,7 @@ function releaseCourt(ws, { silent = false, differe = false } = {}) {
   }
 }
 
-function broadcast() {
+function broadcastNow() {
   const payload = JSON.stringify({
     type: 'state',
     serverNow: Date.now(),
@@ -110,6 +124,28 @@ function broadcast() {
   });
   for (const client of wss.clients) {
     if (client.readyState === 1) client.send(payload);
+  }
+}
+
+// Diffusion coalescée : au lieu d'un envoi complet à chaque point (qui, avec
+// beaucoup de téléphones, ferait exploser la bande passante), on diffuse au plus
+// une fois toutes ~200 ms. La 1re modif part tout de suite (réactivité), les
+// suivantes d'une rafale sont regroupées en un seul envoi.
+const BC_MIN_MS = 200;
+let lastBroadcast = 0;
+let bcTimer = null;
+function broadcast() {
+  if (bcTimer) return;
+  const since = Date.now() - lastBroadcast;
+  if (since >= BC_MIN_MS) {
+    lastBroadcast = Date.now();
+    broadcastNow();
+  } else {
+    bcTimer = setTimeout(() => {
+      bcTimer = null;
+      lastBroadcast = Date.now();
+      broadcastNow();
+    }, BC_MIN_MS - since);
   }
 }
 
