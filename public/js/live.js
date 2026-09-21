@@ -18,7 +18,6 @@ import {
   periodBadge,
   isInterval,
   setTitle,
-  startClockLoop,
 } from './common.js';
 import { computeStandings, teamProfile } from './standings.js';
 import { showGallery, syncGallery } from './gallery.js';
@@ -135,7 +134,9 @@ function matchCard(state, m, { big = false } = {}) {
   }
 
   const foot = el('div', { class: 'match-foot' }, [
-    finished || sets ? null : el('span', { class: clockClass(left, m.status), text: fmtClock(left) }),
+    finished || sets
+      ? null
+      : el('span', { class: clockClass(left, m.status), 'data-clock': m.id, text: fmtClock(left) }),
     el('span', { text: footText }),
   ]);
 
@@ -312,7 +313,11 @@ function calendarRow(state, m) {
   const left = remainingMs(m);
   let statusEl;
   if (m.status === 'live' || m.status === 'paused') {
-    statusEl = el('span', { class: `${clockClass(left, m.status)} ml-clock`, text: fmtClock(left) });
+    statusEl = el('span', {
+      class: `${clockClass(left, m.status)} ml-clock`,
+      'data-clock': m.id,
+      text: fmtClock(left),
+    });
   } else {
     statusEl = scoreOrBadge(m);
   }
@@ -672,6 +677,24 @@ function selectTab(view) {
   if (tab) tab.click();
 }
 
+/**
+ * Chaque seconde on met à jour UNIQUEMENT le texte des chronos, en place — on
+ * ne reconstruit plus toute la vue. Sinon, sur téléphone, la reconstruction
+ * annulait le geste de défilement (la page « remontait en haut »). Les vrais
+ * changements (scores, fins de match) arrivent par WebSocket → renderAll.
+ */
+function tickClocks() {
+  const state = store.state;
+  if (!state) return;
+  for (const node of document.querySelectorAll('[data-clock]')) {
+    const m = state.matches.find((x) => x.id === node.dataset.clock);
+    if (!m) continue;
+    const ms = remainingMs(m);
+    node.textContent = fmtClock(ms);
+    node.className = clockClass(ms, m.status) + (node.classList.contains('ml-clock') ? ' ml-clock' : '');
+  }
+}
+
 onState(renderAll);
-startClockLoop(renderAll);
+setInterval(tickClocks, 500);
 connect();
