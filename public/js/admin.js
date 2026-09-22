@@ -494,16 +494,23 @@ function renderBracket(state) {
 
   const qualifBlock = q.error
     ? el('p', { class: 'hint', style: 'color:var(--warn)', text: q.error })
-    : el('div', {}, [
-        el('label', { text: `Premiers de poule (${q.firsts.length})` }),
-        el('div', { style: 'margin-bottom:10px' }, q.firsts.map((r) => chip(r))),
-        el('label', { text: `Deuxièmes de poule (${q.seconds.length})` }),
-        el('div', { style: 'margin-bottom:10px' }, q.seconds.map((r) => chip(r))),
-        el('label', {
-          text: `Meilleurs troisièmes — ${q.thirdsTaken.length} repêchés sur ${q.thirds.length}`,
-        }),
-        el('div', {}, q.thirds.map((r) => chip(r, { out: !q.thirdsTaken.includes(r) }))),
-      ]);
+    : el(
+        'div',
+        {},
+        q.tiers.flatMap((t) =>
+          t.complete
+            ? [
+                el('label', { text: `${t.label} de poule (${t.all.length})` }),
+                el('div', { style: 'margin-bottom:10px' }, t.all.map((r) => chip(r))),
+              ]
+            : [
+                el('label', {
+                  text: `Meilleurs ${t.label.toLowerCase()} — ${t.taken.length} repêché(s) sur ${t.all.length}`,
+                }),
+                el('div', { style: 'margin-bottom:10px' }, t.all.map((r) => chip(r, { out: !t.taken.includes(r) }))),
+              ]
+        )
+      );
 
   const generate = async () => {
     const notes = [];

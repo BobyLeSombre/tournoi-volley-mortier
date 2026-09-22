@@ -83,6 +83,26 @@ export function computeStandings(state, poolId) {
  * Les 3es de poules différentes se comparent comme au classement : victoires,
  * puis total de points marqués.
  */
+// Libellés de rang de poule : pluriel pour les paliers, singulier pour une
+// équipe. rank 0 = premiers/1er, 1 = deuxièmes/2e, etc.
+const RANK_PLURAL = ['Premiers', 'Deuxièmes', 'Troisièmes', 'Quatrièmes', 'Cinquièmes', 'Sixièmes'];
+export const rankPlural = (rank) => RANK_PLURAL[rank] || `${rank + 1}èmes`;
+export const rankSingular = (rank) => (rank === 0 ? '1er' : `${rank + 1}e`);
+
+/**
+ * Détermine les équipes qualifiées pour la phase finale et leur ordre de tête
+ * de série, quel que soit le nombre de poules.
+ *
+ * Règle générale (aucun réglage) :
+ *   1. Le tableau final est la plus grande puissance de 2 ≤ nombre d'équipes.
+ *   2. On qualifie les rangs de poule ENTIERS (tous les 1ers, puis tous les 2es…)
+ *      tant qu'un rang complet tient dans le tableau.
+ *   3. On complète les places restantes en repêchant les meilleurs du rang
+ *      suivant, départagés au classement (victoires, puis points marqués).
+ *
+ * Exemples : 6 poules de 4 → tableau de 16 = 1ers + 2es + 4 meilleurs 3es ;
+ *            5 poules de 4 → tableau de 16 = 1ers + 2es + 3es + le meilleur 4e.
+ */
 export function qualifiedTeams(state) {
   if (!state.pools.length) return { error: 'Aucune poule.' };
   const per = state.pools.map((p) => ({ pool: p, rows: computeStandings(state, p.id) }));
@@ -94,30 +114,43 @@ export function qualifiedTeams(state) {
   const byRank = (a, b) =>
     b.won - a.won || b.pointsFor - a.pointsFor || a.name.localeCompare(b.name, 'fr');
 
-  const firsts = per.map((s) => tag(s.rows[0], s)).sort(byRank);
-  const seconds = per.map((s) => tag(s.rows[1], s)).sort(byRank);
-  const thirds = per.filter((s) => s.rows[2]).map((s) => tag(s.rows[2], s)).sort(byRank);
+  // Tableau final = plus grande puissance de 2 ≤ nombre total d'équipes en poule.
+  const totalTeams = per.reduce((n, s) => n + s.rows.length, 0);
+  let size = 1;
+  while (size * 2 <= totalTeams) size *= 2;
+  if (size < 2) return { error: "Pas assez d'équipes pour un tableau." };
 
-  const base = firsts.length + seconds.length;
-  let size = 2;
-  while (size < base) size *= 2;
-  const needed = size - base;
-  if (needed > thirds.length) {
-    return {
-      error: `Impossible de compléter un tableau de ${size} : il faudrait ${needed} troisième(s), il n'y en a que ${thirds.length}.`,
-    };
+  // Un palier = toutes les équipes d'un même rang de poule, classées entre elles.
+  const tierAt = (i) => per.filter((s) => s.rows[i]).map((s) => tag(s.rows[i], s)).sort(byRank);
+
+  // Paliers entiers tant qu'ils tiennent, puis repêchage du palier suivant.
+  const tiers = [];
+  const seeds = [];
+  for (let rank = 0; seeds.length < size; rank++) {
+    const all = tierAt(rank);
+    if (!all.length) break;
+    const room = size - seeds.length;
+    const taken = all.length <= room ? all : all.slice(0, room);
+    tiers.push({ rank, label: rankPlural(rank), all, taken, complete: taken.length === all.length });
+    seeds.push(...taken);
+  }
+  if (seeds.length < size) {
+    return { error: `Impossible de compléter un tableau de ${size} : pas assez d'équipes qualifiées.` };
   }
 
-  const thirdsTaken = thirds.slice(0, needed);
+  // Le dernier palier est celui du repêchage s'il n'a pas été pris en entier.
+  const repTier = tiers.find((t) => !t.complete) || null;
   return {
     size,
-    // Têtes de série : les 1ers d'abord (classés entre eux), puis les 2es,
-    // puis les 3es repêchés.
-    seeds: [...firsts, ...seconds, ...thirdsTaken],
-    firsts,
-    seconds,
-    thirds,
-    thirdsTaken,
+    // Têtes de série : paliers entiers dans l'ordre, puis repêchés.
+    seeds,
+    tiers,
+    repTier,
+    // Compat rétro (ancien schéma 2 par poule + meilleurs 3es).
+    firsts: tiers[0] ? tiers[0].all : [],
+    seconds: tiers[1] ? tiers[1].all : [],
+    thirds: repTier ? repTier.all : [],
+    thirdsTaken: repTier ? repTier.taken : [],
   };
 }
 
@@ -195,14 +228,22 @@ export function teamProfile(state, teamId) {
     // Qualification provisoire, d'après le classement à l'instant T.
     const q = qualifiedTeams(state);
     if (!q.error && poolRow) {
-      const dansListe = (list) => list.some((r) => r.teamId === teamId);
-      if (dansListe(q.firsts)) qualif = { in: true, provisional: true, label: `1er de ${pool.name}` };
-      else if (dansListe(q.seconds)) qualif = { in: true, provisional: true, label: `2e de ${pool.name}` };
-      else if (dansListe(q.thirdsTaken))
-        qualif = { in: true, provisional: true, label: 'repêché·e (meilleur 3e)' };
-      else if (dansListe(q.thirds))
-        qualif = { in: false, provisional: true, label: `3e de ${pool.name} — hors repêchage` };
-      else qualif = { in: false, provisional: true, label: `${poolRow.rank}e de ${pool.name}` };
+      const has = (list) => list.some((r) => r.teamId === teamId);
+      // Palier de poule de l'équipe (0 = 1er, 1 = 2e…).
+      const myTier = q.tiers.find((t) => t.all.some((r) => r.teamId === teamId));
+      const place = `${rankSingular(poolRow.rank - 1)} de ${pool.name}`;
+      if (myTier && myTier.complete) {
+        // Rang entièrement qualifié.
+        qualif = { in: true, provisional: true, label: place };
+      } else if (myTier && has(myTier.taken)) {
+        // Repêché·e parmi les meilleurs de son rang.
+        qualif = { in: true, provisional: true, label: `repêché·e (meilleur ${rankSingular(myTier.rank)})` };
+      } else if (myTier) {
+        // Dans le rang du repêchage mais pas retenu·e.
+        qualif = { in: false, provisional: true, label: `${place} — hors repêchage` };
+      } else {
+        qualif = { in: false, provisional: true, label: place };
+      }
     }
   }
 
