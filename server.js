@@ -11,6 +11,7 @@ import QRCode from 'qrcode-svg';
 import * as M from './src/model.js';
 import { loadState, save, flush } from './src/store.js';
 import * as Photos from './src/photos.js';
+import * as Branding from './src/branding.js';
 import { createStoreZip } from './src/zip.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,6 +19,7 @@ const PORT = process.env.PORT || 5183;
 
 let state = loadState();
 Photos.load();
+Branding.load();
 
 // Sur un hébergement public, on remplace les identifiants par défaut par ceux
 // fournis en variables d'environnement. Un mot de passe déjà personnalisé
@@ -120,6 +122,8 @@ function broadcastNow() {
     // Juste un compteur : les galeries ouvertes rechargent l'index quand il
     // change. Aucune image ne passe par le WebSocket.
     photosVersion: Photos.getVersion(),
+    // Idem pour le logo : un numéro de version, l'image reste servie en statique.
+    logoVersion: Branding.getVersion(),
     state: M.publicState(state),
   });
   for (const client of wss.clients) {
@@ -180,6 +184,7 @@ wss.on('connection', (ws) => {
       serverNow: Date.now(),
       occupiedCourts: occupiedCourts(),
       photosVersion: Photos.getVersion(),
+      logoVersion: Branding.getVersion(),
       state: M.publicState(state),
     })
   );
@@ -304,6 +309,21 @@ app.delete('/api/photos/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Logo du tournoi : le fichier perso s'il existe, sinon le logo par défaut.
+// Le paramètre ?v= (numéro de version) permet un cache long tout en se
+// rafraîchissant dès qu'on change le logo.
+app.get('/api/logo', (req, res) => {
+  const custom = Branding.filePath();
+  if (req.query.v) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  else res.setHeader('Cache-Control', 'no-cache');
+  if (custom) {
+    res.setHeader('Content-Type', Branding.contentType());
+    return res.sendFile(custom);
+  }
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.sendFile(path.join(__dirname, 'public', 'logo.jpg'));
+});
+
 app.get('/api/round', (req, res) => {
   res.json(M.roundProgress(state) || { round: null, termine: true });
 });
@@ -419,6 +439,22 @@ app.post('/api/ref/match/:id/reopen', (req, res) => {
 });
 
 // ----------------------------------------------------------------- API admin
+
+// Logo du tournoi : upload (dataURL PNG/JPEG déjà réduite côté client) et reset.
+app.post('/api/admin/logo', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const r = Branding.set(req.body?.logo);
+  if (r.error) return fail(res, 400, r.error);
+  broadcast(); // bump du logoVersion → les pages ouvertes rechargent le logo
+  res.json({ ok: true, version: r.version });
+});
+
+app.delete('/api/admin/logo', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const r = Branding.clear();
+  broadcast();
+  res.json({ ok: true, version: r.version });
+});
 
 app.post('/api/admin/config', (req, res) => {
   if (!requireAdmin(req, res)) return;

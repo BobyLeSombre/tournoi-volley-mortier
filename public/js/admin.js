@@ -245,6 +245,95 @@ function renderConfig(state) {
   ]);
 }
 
+/** Réduit une image (côté client) sous maxSide px, en gardant le PNG transparent. */
+function shrinkImage(file, maxSide) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const isPng = file.type === 'image/png';
+      resolve(canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : 0.9));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Image illisible.'));
+    };
+    img.src = url;
+  });
+}
+
+/** Changer le logo du tournoi (en-tête, vidéoprojecteur, écran arbitre). */
+function renderLogo(state) {
+  const preview = el('img', {
+    src: `/api/logo?v=${store.logoVersion}`,
+    alt: 'Logo actuel',
+    style:
+      'height:72px;max-width:220px;object-fit:contain;background:#f4f4f4;' +
+      'border:1px solid var(--line);border-radius:10px;padding:6px',
+  });
+
+  const fileInput = el('input', {
+    type: 'file',
+    accept: 'image/png,image/jpeg',
+    style: 'display:none',
+    onChange: async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = ''; // autorise le re-choix du même fichier
+      if (!file) return;
+      if (!/^image\/(png|jpe?g)$/.test(file.type)) {
+        toast('Choisis une image PNG ou JPEG.', true);
+        return;
+      }
+      try {
+        const dataUrl = await shrinkImage(file, 512);
+        const r = await post('/api/admin/logo', { logo: dataUrl });
+        preview.src = `/api/logo?v=${r.version}`;
+        toast('Logo mis à jour ✓');
+      } catch (err) {
+        toast(err.message || 'Échec du changement de logo', true);
+      }
+    },
+  });
+
+  const reset = async () => {
+    if (!confirm('Revenir au logo par défaut ?')) return;
+    try {
+      const r = await api('/api/admin/logo', undefined, { 'x-admin-password': pwd }, 'DELETE');
+      preview.src = `/api/logo?v=${r.version}`;
+      toast('Logo par défaut rétabli ✓');
+    } catch (err) {
+      toast(err.message || 'Échec', true);
+    }
+  };
+
+  return panel(
+    'Logo du tournoi',
+    'Affiché en haut des écrans, sur le mode vidéoprojecteur et l’écran arbitre.',
+    [
+      el('div', { style: 'display:flex;align-items:center;gap:16px;flex-wrap:wrap' }, [
+        preview,
+        el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [
+          el('button', { class: 'btn primary', text: 'Choisir une image…', onClick: () => fileInput.click() }),
+          el('button', { class: 'btn', text: 'Logo par défaut', onClick: reset }),
+        ]),
+      ]),
+      fileInput,
+      el('p', { class: 'hint', style: 'margin-top:12px' }, [
+        'PNG (fond transparent conseillé) ou JPEG — l’image est réduite automatiquement. ' +
+          'Le changement s’applique en direct sur tous les écrans connectés.',
+      ]),
+    ]
+  );
+}
+
 
 /** Où en est chaque terrain — la vue dont on a besoin en marchant dans la salle. */
 function renderCourtsPanel(state) {
@@ -785,6 +874,7 @@ const TABS = [
     hint: 'À remplir une fois, avant le tournoi.',
     panels: (state) => [
       renderConfig(state),
+      renderLogo(state),
       renderTeams(state, { post, panel, rerender: () => render(store.state, true) }),
       renderSchedule(state),
     ],

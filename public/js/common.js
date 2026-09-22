@@ -5,6 +5,7 @@ export const store = {
   offset: 0, // serverNow - Date.now() : corrige l'horloge du téléphone
   occupiedCourts: [], // terrains déjà pris par un arbitre connecté
   photosVersion: 0, // change quand une photo est ajoutée / retirée
+  logoVersion: 0, // change quand l'orga remplace le logo du tournoi
 };
 
 const listeners = new Set();
@@ -24,7 +25,24 @@ function applyMessage(msg) {
   store.state = msg.state;
   store.occupiedCourts = msg.occupiedCourts || [];
   if (msg.photosVersion != null) store.photosVersion = msg.photosVersion;
+  if (msg.logoVersion != null && msg.logoVersion !== store.logoVersion) {
+    store.logoVersion = msg.logoVersion;
+    refreshLogos();
+  }
   for (const fn of listeners) fn(store.state);
+}
+
+/**
+ * Recharge les logos (en-tête, mode écran géant, porte arbitre) et le favicon
+ * quand l'orga a changé le logo, sans rafraîchir la page. Le ?v= casse le cache.
+ */
+function refreshLogos() {
+  const url = `/api/logo?v=${store.logoVersion}`;
+  for (const img of document.querySelectorAll('img.logo, img.tv-logo, img.gate-logo')) {
+    img.src = url;
+  }
+  const fav = document.querySelector('link[rel="icon"]');
+  if (fav) fav.href = url;
 }
 
 /**

@@ -4,6 +4,7 @@ node_modules/
 # démarre donc sur un tournoi vierge.
 data/*.json
 data/photos/
+data/logo.*
 !data/.gitkeep
 
 .env
