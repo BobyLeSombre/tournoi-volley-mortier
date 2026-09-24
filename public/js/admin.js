@@ -179,6 +179,7 @@ function renderConfig(state) {
         allerRetour: get('cfg-aller-retour') === '1',
         poolPerCourt: get('cfg-pool-per-court') === '1',
         courts: get('cfg-courts').split(',').map((s) => s.trim()).filter(Boolean),
+        bracketCourts: Number(get('cfg-bracket-courts')) || 0,
         refereePin: get('cfg-pin') || undefined,
         adminPassword: get('cfg-admin') || undefined,
       },
@@ -216,6 +217,20 @@ function renderConfig(state) {
     el('div', { class: 'field' }, [
       el('label', { text: 'Terrains (séparés par des virgules)' }),
       el('input', { id: 'cfg-courts', value: c.courts.join(', ') }),
+    ]),
+    el('div', { class: 'field' }, [
+      el('label', { text: 'Terrains pour la phase finale (0 = tous)' }),
+      el('input', {
+        id: 'cfg-bracket-courts',
+        type: 'number',
+        min: '0',
+        max: '40',
+        value: String(c.bracketCourts || 0),
+      }),
+    ]),
+    el('p', { class: 'hint', style: 'margin:-4px 0 16px' }, [
+      'Utile si le tableau final se joue sur moins de terrains que les poules ' +
+        '(ex. poules sur 5 terrains, phase finale sur 4). À régler avant de générer le tableau.',
     ]),
     el('div', { class: 'field' }, [
       el('label', { text: 'Format des poules' }),

@@ -40,6 +40,9 @@ export function emptyState() {
       // Six terrains par défaut : le format habituel du tournoi (24 équipes en
       // 6 poules). Modifiable dans les réglages.
       courts: ['Terrain 1', 'Terrain 2', 'Terrain 3', 'Terrain 4', 'Terrain 5', 'Terrain 6'],
+      // Nombre de terrains pour la phase finale (le tableau). 0 = tous les
+      // terrains des poules. Ex. : poules sur 5 terrains, tableau sur 4.
+      bracketCourts: 0,
       // Pas de barème de points : le classement se fait aux victoires, puis au
       // total des points marqués (voir public/js/standings.js).
       adminPassword: 'admin',
@@ -549,7 +552,11 @@ export function generateBracket(state) {
   if (q.error) return q;
 
   state.matches = state.matches.filter((m) => !m.stage); // remplace l'existant
-  const courts = state.config.courts.length ? state.config.courts : ['Terrain 1'];
+  const allCourts = state.config.courts.length ? state.config.courts : ['Terrain 1'];
+  // La phase finale peut se jouer sur moins de terrains que les poules
+  // (config.bracketCourts). 0 / non défini = tous les terrains.
+  const n = state.config.bracketCourts;
+  const courts = n && n > 0 ? allCourts.slice(0, Math.min(n, allCourts.length)) : allCourts;
 
   // Paires du premier tour, par têtes de série.
   const order = bracketSeedOrder(q.size);

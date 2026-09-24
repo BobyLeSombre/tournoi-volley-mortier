@@ -476,6 +476,9 @@ app.post('/api/admin/config', (req, res) => {
     cfg.courts = c.courts.map((x) => String(x).trim()).filter(Boolean).slice(0, 40);
     if (!cfg.courts.length) cfg.courts = ['Terrain 1'];
   }
+  if (c.bracketCourts != null) {
+    cfg.bracketCourts = Math.max(0, Math.min(40, Math.round(Number(c.bracketCourts)) || 0));
+  }
   if (c.refereePin) cfg.refereePin = String(c.refereePin).slice(0, 40);
   if (c.adminPassword) cfg.adminPassword = String(c.adminPassword).slice(0, 60);
 
