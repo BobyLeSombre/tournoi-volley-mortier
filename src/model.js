@@ -37,9 +37,8 @@ export function emptyState() {
       // Pas d'horaires : les matchs sont organisés en tours. Un tour démarre
       // quand l'organisation l'annonce, et se termine quand tous ses matchs
       // sont clôturés par les arbitres.
-      // Six terrains par défaut : le format habituel du tournoi (24 équipes en
-      // 6 poules). Modifiable dans les réglages.
-      courts: ['Terrain 1', 'Terrain 2', 'Terrain 3', 'Terrain 4', 'Terrain 5', 'Terrain 6'],
+      // Cinq terrains par défaut. Modifiable dans les réglages.
+      courts: ['Terrain 1', 'Terrain 2', 'Terrain 3', 'Terrain 4', 'Terrain 5'],
       // Nombre de terrains pour la phase finale (le tableau). 0 = tous les
       // terrains des poules. Ex. : poules sur 5 terrains, tableau sur 4.
       bracketCourts: 0,
