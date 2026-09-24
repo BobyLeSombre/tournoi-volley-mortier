@@ -30,6 +30,10 @@ export function emptyState() {
       // Aller-retour : chaque paire d'une poule se rencontre deux fois, avec
       // inversion des côtés au match retour.
       allerRetour: false,
+      // Une poule par terrain : chaque poule joue tous ses matchs sur son
+      // propre terrain, du début à la fin (logistique simple). Sinon, on
+      // répartit les matchs sur tous les terrains pour maximiser le repos.
+      poolPerCourt: false,
       // Pas d'horaires : les matchs sont organisés en tours. Un tour démarre
       // quand l'organisation l'annonce, et se termine quand tous ses matchs
       // sont clôturés par les arbitres.
@@ -390,65 +394,97 @@ export function generateSchedule(state, { poolIds = null, keepFinished = false }
     dejaJoue.set(k, (dejaJoue.get(k) || 0) + 1);
   }
 
-  // File d'attente : tous les affrontements, triés par numéro de tour puis par poule.
-  const queue = [];
-  for (const pool of targetPools) {
-    const teamIds = state.teams.filter((t) => t.poolId === pool.id).map((t) => t.id);
-    let rounds = roundRobin(teamIds);
-    if (state.config.allerRetour) rounds = withReturnLegs(rounds);
-    rounds.forEach((pairs, roundIdx) => {
-      for (const [a, b] of pairs) {
-        const k = pairKey(a, b);
-        const reste = dejaJoue.get(k) || 0;
-        if (reste > 0) {
-          dejaJoue.set(k, reste - 1); // cette rencontre est déjà au calendrier
-          continue;
-        }
-        queue.push({ poolId: pool.id, a, b, round: roundIdx });
-      }
-    });
-  }
-  queue.sort((x, y) => x.round - y.round);
-
   const courts = state.config.courts.length ? state.config.courts : ['Terrain 1'];
-  const slots = [];
-  const pending = [...queue];
-  while (pending.length) {
-    const used = new Set();
-    const slot = [];
-    for (let i = 0; i < pending.length && slot.length < courts.length; ) {
-      const m = pending[i];
-      if (used.has(m.a) || used.has(m.b)) {
-        i++;
-        continue;
-      }
-      used.add(m.a);
-      used.add(m.b);
-      slot.push(m);
-      pending.splice(i, 1);
-    }
-    slots.push(slot);
-  }
-
   // En cours de tournoi, la reprise s'ajoute après le dernier tour conservé.
   const premierTour = keepFinished && kept.length ? nextFreeRound({ matches: kept }) : 0;
-
   const generated = [];
-  slots.forEach((slot, slotIdx) => {
-    slot.forEach((m, courtIdx) => {
-      const round = premierTour + slotIdx;
-      generated.push(
-        createMatch(state, {
-          poolId: m.poolId,
-          teamAId: m.a,
-          teamBId: m.b,
-          court: courts[courtIdx],
-          round,
-          order: round * 100 + courtIdx,
-        })
-      );
+
+  if (state.config.poolPerCourt) {
+    // Une poule par terrain : chaque poule enchaîne TOUS ses matchs sur son
+    // propre terrain, du début à la fin (chaque match occupe un tour). Simple à
+    // suivre pour les joueurs et l'arbitre, au prix d'un peu moins de repos.
+    // S'il y a plus de poules que de terrains, les poules en surplus partagent
+    // un terrain et jouent à la suite (le tournoi dure alors plus longtemps).
+    const prochainTourParTerrain = new Map(courts.map((c) => [c, premierTour]));
+    targetPools.forEach((pool, i) => {
+      const court = courts[i % courts.length];
+      const teamIds = state.teams.filter((t) => t.poolId === pool.id).map((t) => t.id);
+      let rounds = roundRobin(teamIds);
+      if (state.config.allerRetour) rounds = withReturnLegs(rounds);
+      for (const pairs of rounds) {
+        for (const [a, b] of pairs) {
+          const k = pairKey(a, b);
+          const reste = dejaJoue.get(k) || 0;
+          if (reste > 0) {
+            dejaJoue.set(k, reste - 1); // cette rencontre est déjà au calendrier
+            continue;
+          }
+          const round = prochainTourParTerrain.get(court);
+          prochainTourParTerrain.set(court, round + 1);
+          generated.push(
+            createMatch(state, { poolId: pool.id, teamAId: a, teamBId: b, court, round, order: 0 })
+          );
+        }
+      }
     });
-  });
+  } else {
+    // Répartition classique : on remplit chaque tour d'autant de matchs qu'il y
+    // a de terrains, sans qu'une équipe joue deux fois dans le même tour. C'est
+    // ce qui maximise le repos entre deux matchs d'une même équipe.
+    const queue = [];
+    for (const pool of targetPools) {
+      const teamIds = state.teams.filter((t) => t.poolId === pool.id).map((t) => t.id);
+      let rounds = roundRobin(teamIds);
+      if (state.config.allerRetour) rounds = withReturnLegs(rounds);
+      rounds.forEach((pairs, roundIdx) => {
+        for (const [a, b] of pairs) {
+          const k = pairKey(a, b);
+          const reste = dejaJoue.get(k) || 0;
+          if (reste > 0) {
+            dejaJoue.set(k, reste - 1); // cette rencontre est déjà au calendrier
+            continue;
+          }
+          queue.push({ poolId: pool.id, a, b, round: roundIdx });
+        }
+      });
+    }
+    queue.sort((x, y) => x.round - y.round);
+
+    const slots = [];
+    const pending = [...queue];
+    while (pending.length) {
+      const used = new Set();
+      const slot = [];
+      for (let i = 0; i < pending.length && slot.length < courts.length; ) {
+        const m = pending[i];
+        if (used.has(m.a) || used.has(m.b)) {
+          i++;
+          continue;
+        }
+        used.add(m.a);
+        used.add(m.b);
+        slot.push(m);
+        pending.splice(i, 1);
+      }
+      slots.push(slot);
+    }
+
+    slots.forEach((slot, slotIdx) => {
+      slot.forEach((m, courtIdx) => {
+        const round = premierTour + slotIdx;
+        generated.push(
+          createMatch(state, {
+            poolId: m.poolId,
+            teamAId: m.a,
+            teamBId: m.b,
+            court: courts[courtIdx],
+            round,
+            order: round * 100 + courtIdx,
+          })
+        );
+      });
+    });
+  }
 
   state.matches = [...kept, ...generated];
   resequence(state);

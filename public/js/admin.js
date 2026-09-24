@@ -176,6 +176,7 @@ function renderConfig(state) {
         periodDurationMin: get('cfg-period-duration'),
         periods: get('cfg-periods'),
         allerRetour: get('cfg-aller-retour') === '1',
+        poolPerCourt: get('cfg-pool-per-court') === '1',
         courts: get('cfg-courts').split(',').map((s) => s.trim()).filter(Boolean),
         refereePin: get('cfg-pin') || undefined,
         adminPassword: get('cfg-admin') || undefined,
@@ -227,6 +228,21 @@ function renderConfig(state) {
           value: '1',
           selected: c.allerRetour ? '' : null,
           text: 'Aller-retour — chaque équipe en affronte une autre 2 fois',
+        }),
+      ]),
+    ]),
+    el('div', { class: 'field' }, [
+      el('label', { text: 'Occupation des terrains' }),
+      el('select', { id: 'cfg-pool-per-court' }, [
+        el('option', {
+          value: '0',
+          selected: c.poolPerCourt ? null : '',
+          text: 'Répartir les poules sur tous les terrains (repos maximal)',
+        }),
+        el('option', {
+          value: '1',
+          selected: c.poolPerCourt ? '' : null,
+          text: 'Une poule par terrain (chaque poule reste sur son terrain)',
         }),
       ]),
     ]),

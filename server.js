@@ -471,6 +471,7 @@ app.post('/api/admin/config', (req, res) => {
     cfg.periods = Math.max(1, Math.min(5, Math.round(Number(c.periods)) || 1));
   }
   if (c.allerRetour !== undefined) cfg.allerRetour = !!c.allerRetour;
+  if (c.poolPerCourt !== undefined) cfg.poolPerCourt = !!c.poolPerCourt;
   if (Array.isArray(c.courts)) {
     cfg.courts = c.courts.map((x) => String(x).trim()).filter(Boolean).slice(0, 40);
     if (!cfg.courts.length) cfg.courts = ['Terrain 1'];
