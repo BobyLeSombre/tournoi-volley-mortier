@@ -19,6 +19,7 @@ import {
   roundLabel,
   currentRound,
   statusBadge,
+  setPoints,
   setTitle,
 } from './common.js';
 
@@ -290,7 +291,7 @@ function renderPicker(state) {
 
 // ---------------------------------------------------- tableau de marque : sets
 
-/** Points à atteindre pour le set en cours (15 au set décisif). */
+/** Points à atteindre pour le set en cours (25 en un set unique). */
 function setTarget(m) {
   const decider = m.setsA === m.setsToWin - 1 && m.setsB === m.setsToWin - 1;
   return decider ? m.pointsDecider : m.pointsSet;
@@ -298,32 +299,38 @@ function setTarget(m) {
 
 function renderSetsBoard(state, m, context) {
   const finished = m.status === 'finished';
+  const single = m.setsToWin === 1; // un seul set à 25 (finale / petite finale)
   const nameA = teamName(state, m.teamAId);
   const nameB = teamName(state, m.teamBId);
   const setNo = m.sets.length + 1;
+  const disp = setPoints(m);
 
   const header = el('div', { class: 'sets-header' }, [
-    el('div', { class: 'sets-count' }, [
-      el('span', { class: m.setsA > m.setsB ? 'lead' : '', text: String(m.setsA) }),
-      el('span', { class: 'sets-sep', text: 'SETS' }),
-      el('span', { class: m.setsB > m.setsA ? 'lead' : '', text: String(m.setsB) }),
-    ]),
+    single
+      ? null
+      : el('div', { class: 'sets-count' }, [
+          el('span', { class: m.setsA > m.setsB ? 'lead' : '', text: String(m.setsA) }),
+          el('span', { class: 'sets-sep', text: 'SETS' }),
+          el('span', { class: m.setsB > m.setsA ? 'lead' : '', text: String(m.setsB) }),
+        ]),
     el('div', {
       class: 'sets-info',
       text: finished
-        ? 'Finale terminée — 3 sets gagnés'
-        : `Set ${setNo} sur 5 · jusqu'à ${setTarget(m)} points (2 d'écart)`,
+        ? `${matchLabel(state, m)} terminée`
+        : single
+          ? `Un seul set · jusqu'à ${setTarget(m)} points (2 d'écart)`
+          : `Set ${setNo} sur ${m.setsToWin * 2 - 1} · jusqu'à ${setTarget(m)} points (2 d'écart)`,
     }),
   ]);
 
   const side = (team) => {
     const nm = team === 'A' ? nameA : nameB;
-    const pts = team === 'A' ? m.scoreA : m.scoreB;
+    const pts = single ? (team === 'A' ? disp.a : disp.b) : team === 'A' ? m.scoreA : m.scoreB;
     const setsW = team === 'A' ? m.setsA : m.setsB;
     return el('div', { class: 'team-panel' }, [
       el('div', { class: 'label' }, [
         nm,
-        el('span', { class: 'setwins', text: `${setsW} set${setsW > 1 ? 's' : ''}` }),
+        single ? null : el('span', { class: 'setwins', text: `${setsW} set${setsW > 1 ? 's' : ''}` }),
       ]),
       el('button', {
         class: 'plus',
@@ -340,7 +347,7 @@ function renderSetsBoard(state, m, context) {
     ]);
   };
 
-  const historique = m.sets.length
+  const historique = !single && m.sets.length
     ? el('div', { class: 'sets-history' }, [
         el('div', { class: 'sets-history-title', text: 'Sets joués' }),
         ...m.sets.map((st, i) =>

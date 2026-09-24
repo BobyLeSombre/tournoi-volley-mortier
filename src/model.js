@@ -245,9 +245,10 @@ export function reopenMatch(match) {
 
 // ------------------------------------------------------- matchs aux sets
 
-// La finale se joue « 3 sets gagnants » : premier à 3 sets (au meilleur des 5),
-// sets à 25 points avec 2 d'écart, 5e set décisif à 15.
-export const SETS_FORMAT = { setsToWin: 3, pointsSet: 25, pointsDecider: 15, lead: 2 };
+// La finale et la petite finale se jouent en UN seul set à 25 points, avec
+// 2 points d'écart. `setsToWin: 1` → un set gagné termine le match ;
+// `pointsDecider` = `pointsSet` pour que la cible reste 25 (pas de set décisif).
+export const SETS_FORMAT = { setsToWin: 1, pointsSet: 25, pointsDecider: 25, lead: 2 };
 
 export function isSetMatch(match) {
   return match?.format === 'sets';
@@ -269,7 +270,7 @@ export function makeSetsMatch(match, opts = {}) {
   return match;
 }
 
-/** Nombre de points à atteindre pour le set en cours (15 au set décisif). */
+/** Nombre de points à atteindre pour le set en cours (25 en un set unique). */
 export function currentSetTarget(match) {
   const decider = match.setsA === match.setsToWin - 1 && match.setsB === match.setsToWin - 1;
   return decider ? match.pointsDecider : match.pointsSet;
@@ -589,7 +590,7 @@ export function generateBracket(state) {
       });
       m.stage = stage;
       m.slot = slot;
-      if (stage === 'finale') makeSetsMatch(m); // la finale se joue aux sets
+      if (stage === 'finale') makeSetsMatch(m); // la finale se joue en un set à 25
       if (prev) {
         m.srcA = { matchId: prev[2 * slot].id, take: 'winner' };
         m.srcB = { matchId: prev[2 * slot + 1].id, take: 'winner' };
@@ -614,6 +615,7 @@ export function generateBracket(state) {
       pf.slot = 0;
       pf.srcA = { matchId: prev[0].id, take: 'loser' };
       pf.srcB = { matchId: prev[1].id, take: 'loser' };
+      makeSetsMatch(pf); // la petite finale aussi : un set à 25
       state.matches.push(pf);
       created.push(pf);
     }

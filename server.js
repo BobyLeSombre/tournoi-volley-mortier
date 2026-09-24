@@ -712,7 +712,20 @@ app.post('/api/admin/matches', (req, res) => {
     const match = M.findMatch(state, id);
     if (!match) return fail(res, 404, 'Match introuvable');
 
-    if (M.isSetMatch(match)) {
+    if (M.isSetMatch(match) && match.setsToWin === 1) {
+      // Finale / petite finale : un seul set, on corrige le score en POINTS.
+      const a = Math.max(0, Math.min(999, Math.round(Number(data?.scoreA)) || 0));
+      const b = Math.max(0, Math.min(999, Math.round(Number(data?.scoreB)) || 0));
+      if (a === b) return fail(res, 400, 'Ce match doit avoir un vainqueur (score différent)');
+      match.sets = [{ a, b }];
+      match.setsA = a > b ? 1 : 0;
+      match.setsB = b > a ? 1 : 0;
+      match.scoreA = 0;
+      match.scoreB = 0;
+      match.status = 'finished';
+      match.finishedAt = match.finishedAt || Date.now();
+      match.winnerId = a > b ? match.teamAId : match.teamBId;
+    } else if (M.isSetMatch(match)) {
       const a = Math.max(0, Math.min(match.setsToWin, Math.round(Number(data?.setsA)) || 0));
       const b = Math.max(0, Math.min(match.setsToWin, Math.round(Number(data?.setsB)) || 0));
       if (a === b) return fail(res, 400, 'La finale doit avoir un vainqueur (sets différents)');

@@ -17,6 +17,7 @@ import {
   statusBadge,
   periodBadge,
   isInterval,
+  setPoints,
   setTitle,
 } from './common.js';
 import { computeStandings, teamProfile } from './standings.js';
@@ -79,18 +80,19 @@ function matchCard(state, m, { big = false } = {}) {
   const bWins = finished && m.winnerId === m.teamBId;
 
   const sets = m.format === 'sets';
+  const pts = sets ? setPoints(m) : null;
 
   const head = el('div', { class: 'match-head' }, [
     el('span', { class: 'court', text: m.court }),
     el('span', { class: 'spacer' }),
     el('span', { text: matchLabel(state, m) }),
-    sets ? el('span', { class: 'badge', text: '3 sets gagnants' }) : periodBadge(m),
+    sets ? el('span', { class: 'badge', text: '1 set à 25 pts' }) : periodBadge(m),
     statusBadge(m),
   ]);
 
-  // La finale affiche les SETS gagnés en gros ; le score du set en cours va au pied.
-  const bigA = sets ? m.setsA : m.scoreA;
-  const bigB = sets ? m.setsB : m.scoreB;
+  // Finale / petite finale : un set à 25, on affiche le score en points.
+  const bigA = sets ? pts.a : m.scoreA;
+  const bigB = sets ? pts.b : m.scoreB;
 
   const body = el('div', { class: 'match-body' }, [
     el('div', { class: 'side a' }, [
@@ -117,12 +119,12 @@ function matchCard(state, m, { big = false } = {}) {
     footText =
       m.winnerId === 'draw'
         ? 'Match nul'
-        : `Victoire ${teamName(state, m.winnerId)}${sets ? ' (3 sets gagnés)' : ''}`;
+        : `Victoire ${teamName(state, m.winnerId)}${sets ? ` (${pts.a}–${pts.b})` : ''}`;
   } else if (sets) {
     footText =
       m.status === 'pending'
         ? `${roundLabel(m)} — au lancement de l'organisation`
-        : `Set ${m.sets.length + 1} en cours : ${m.scoreA} – ${m.scoreB}`;
+        : `Set à ${m.pointsSet} points — en cours`;
   } else if (isInterval(m)) {
     footText = `Fin de la période ${m.period} — changement de côté`;
   } else if (m.status === 'live' && left <= 0) {
@@ -262,9 +264,8 @@ function matchLine(state, m, subText, statusEl) {
 
 function scoreOrBadge(m) {
   if (m.status === 'finished') {
-    // La finale se lit en sets gagnés.
-    const a = m.format === 'sets' ? m.setsA : m.scoreA;
-    const b = m.format === 'sets' ? m.setsB : m.scoreB;
+    // Finale / petite finale : un set à 25, on lit le score en points.
+    const { a, b } = m.format === 'sets' ? setPoints(m) : { a: m.scoreA, b: m.scoreB };
     return el('span', { class: 'ml-score', text: `${a} – ${b}` });
   }
   return statusBadge(m);

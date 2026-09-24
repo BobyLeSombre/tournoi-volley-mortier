@@ -11,6 +11,7 @@ import {
   teamName,
   sideName,
   roundProgress,
+  setPoints,
   setTitle,
 } from './common.js';
 import { qualifiedTeams } from './standings.js';
@@ -486,33 +487,35 @@ function matchRow(state, m) {
 
 /**
  * Score d'un match dans la liste admin : éditable dès que le match a commencé
- * (l'organisation peut corriger un score, même après la fin). La finale
- * s'édite en sets gagnés.
+ * (l'organisation peut corriger un score, même après la fin).
  */
 function scoreCell(state, m) {
   if (m.status === 'pending') {
     return el('span', { class: 'badge', text: 'à venir' });
   }
-  const sets = m.format === 'sets';
-  const maxi = sets ? '3' : '99';
+  // Finale / petite finale = un set à 25 : on corrige le score en points comme
+  // un match normal. (Les matchs aux sets multiples éditeraient les sets gagnés.)
+  const multiSets = m.format === 'sets' && m.setsToWin > 1;
+  const pts = m.format === 'sets' ? setPoints(m) : { a: m.scoreA, b: m.scoreB };
+  const maxi = multiSets ? '3' : '99';
   const inA = el('input', {
     class: 'score-edit',
     type: 'number',
     min: '0',
     max: maxi,
-    value: String(sets ? m.setsA : m.scoreA),
+    value: String(multiSets ? m.setsA : pts.a),
   });
   const inB = el('input', {
     class: 'score-edit',
     type: 'number',
     min: '0',
     max: maxi,
-    value: String(sets ? m.setsB : m.scoreB),
+    value: String(multiSets ? m.setsB : pts.b),
   });
   const save = async () => {
     const va = Math.max(0, Number(inA.value) || 0);
     const vb = Math.max(0, Number(inB.value) || 0);
-    const data = sets ? { setsA: va, setsB: vb } : { scoreA: va, scoreB: vb };
+    const data = multiSets ? { setsA: va, setsB: vb } : { scoreA: va, scoreB: vb };
     try {
       await post('/api/admin/matches', { action: 'score', id: m.id, data });
       toast('Score corrigé ✓');
@@ -522,7 +525,7 @@ function scoreCell(state, m) {
   };
   inA.addEventListener('change', save);
   inB.addEventListener('change', save);
-  return el('span', { class: 'score-edit-wrap', title: sets ? 'Sets gagnés' : 'Score' }, [
+  return el('span', { class: 'score-edit-wrap', title: multiSets ? 'Sets gagnés' : 'Score' }, [
     inA,
     el('span', { class: 'score-edit-sep', text: '–' }),
     inB,

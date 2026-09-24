@@ -1,7 +1,7 @@
 // Phase finale : tableau visuel (arbre 8es → finale) + podium à confettis.
 // Utilisé par l'onglet « Phase finale » et par l'écran géant.
 
-import { el, teamName, sideName } from './common.js';
+import { el, teamName, sideName, setPoints } from './common.js';
 
 /** Le tournoi a-t-il une phase finale générée ? */
 export function hasBracket(state) {
@@ -65,15 +65,9 @@ function bracketSlot(state, m, side) {
   const gagnant = finished && m.winnerId === id && m.winnerId !== 'draw';
   const perdant = finished && m.winnerId && m.winnerId !== id && m.winnerId !== 'draw';
 
-  // La finale s'affiche en sets gagnés ; les autres matchs en points.
-  const score =
-    m.format === 'sets'
-      ? side === 'A'
-        ? m.setsA
-        : m.setsB
-      : side === 'A'
-        ? m.scoreA
-        : m.scoreB;
+  // Finale / petite finale : un set à 25, on affiche les points comme les autres.
+  const pts = m.format === 'sets' ? setPoints(m) : { a: m.scoreA, b: m.scoreB };
+  const score = side === 'A' ? pts.a : pts.b;
 
   return el('div', { class: `bm-slot${gagnant ? ' win' : ''}${perdant ? ' lose' : ''}` }, [
     el('span', { class: 'bm-team', text: sideName(state, m, side) }),

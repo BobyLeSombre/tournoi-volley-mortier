@@ -188,6 +188,19 @@ export function sideName(state, m, side) {
   return '—';
 }
 
+/**
+ * Score en points d'un match à set unique (finale / petite finale). Pendant le
+ * jeu c'est le set en cours ; une fois terminé, scoreA/scoreB sont remis à 0 et
+ * le score final est rangé dans `m.sets`, donc on va le rechercher là.
+ */
+export function setPoints(m) {
+  if (m.status === 'finished' && m.sets && m.sets.length) {
+    const last = m.sets[m.sets.length - 1];
+    return { a: last.a, b: last.b };
+  }
+  return { a: m.scoreA, b: m.scoreB };
+}
+
 export function poolName(state, id) {
   if (!id) return null;
   return state.pools.find((p) => p.id === id)?.name || null;
